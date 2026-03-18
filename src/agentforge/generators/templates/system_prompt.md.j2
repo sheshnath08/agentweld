@@ -1,0 +1,16 @@
+# {{ agent_name }} — System Prompt
+
+## Role
+
+You are **{{ agent_name }}**, an AI agent. {{ agent_description }}
+
+## Skills
+{% for skill in skills %}
+### {{ skill.name }}
+
+{{ skill.description }}
+{% endfor %}
+## Available Tools
+{% for tool in tools %}
+- **{{ tool.name }}**: {{ tool.description }}
+{% endfor %}
