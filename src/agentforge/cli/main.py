@@ -8,5 +8,15 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Sub-commands will be registered here in Phase 6 (CLI implementation).
-# Stubs are added as the relevant phases are completed.
+# Import and register each command function directly on the root app
+from agentforge.cli.init import init  # noqa: E402
+from agentforge.cli.add import add  # noqa: E402
+from agentforge.cli.inspect import inspect  # noqa: E402
+from agentforge.cli.generate import generate  # noqa: E402
+from agentforge.cli.preview import preview  # noqa: E402
+
+app.command(name="init")(init)
+app.command(name="add")(add)
+app.command(name="inspect")(inspect)
+app.command(name="generate")(generate)
+app.command(name="preview")(preview)
