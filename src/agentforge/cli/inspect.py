@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
 
 import anyio
 import typer
@@ -18,8 +17,8 @@ from agentforge.utils.errors import ConfigNotFoundError, SourceConnectionError
 
 # STUB: replace with real import after phase-4/5 merge
 try:
-    from agentforge.curation.engine import CurationEngine
     from agentforge.composition.composer import ComposedToolSet, Composer
+    from agentforge.curation.engine import CurationEngine
 except ImportError:
     CurationEngine = None  # type: ignore[assignment,misc]
     Composer = None  # type: ignore[assignment,misc]
@@ -33,7 +32,7 @@ def inspect(
     source: bool = typer.Option(False, "--source", help="Show raw tools from each source"),
     final: bool = typer.Option(False, "--final", help="Show post-curation tools"),
     conflicts: bool = typer.Option(False, "--conflicts", help="Show naming conflicts"),
-    config_path: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to agentforge.yaml"),
+    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to agentforge.yaml"),
 ) -> None:
     """Inspect and display tools from all configured MCP sources."""
 
@@ -94,7 +93,8 @@ def _show_summary(tools_by_source: dict[str, list[ToolDefinition]]) -> None:
     rows = []
     for src_id, tools in tools_by_source.items():
         scored = [t for t in tools if t.quality_score is not None]
-        avg_quality = sum(t.quality_score for t in scored) / len(scored) if scored else None  # type: ignore[union-attr]
+        scores = [t.quality_score for t in scored if t.quality_score is not None]
+        avg_quality: float | None = sum(scores) / len(scores) if scores else None
         rows.append({"source": src_id, "tools": len(tools), "avg_quality": avg_quality})
     console.print(make_sources_table(rows))
 

@@ -25,11 +25,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Registry state — populated by register_adapter() and load_plugin_adapters()
-_REGISTRY: dict[str, "SourceAdapter"] = {}
+_REGISTRY: dict[str, SourceAdapter] = {}
 _plugins_loaded: bool = False
 
 
-def register_adapter(transport_key: str, adapter: "SourceAdapter") -> None:
+def register_adapter(transport_key: str, adapter: SourceAdapter) -> None:
     """Register an adapter instance under a transport key.
 
     Args:
@@ -86,7 +86,7 @@ def _ensure_loaded() -> None:
     _plugins_loaded = True
 
 
-def get_adapter(transport_key: str) -> "SourceAdapter":
+def get_adapter(transport_key: str) -> SourceAdapter:
     """Return the adapter registered for *transport_key*.
 
     Args:
@@ -102,13 +102,12 @@ def get_adapter(transport_key: str) -> "SourceAdapter":
     if transport_key not in _REGISTRY:
         available = ", ".join(sorted(_REGISTRY.keys())) or "(none)"
         raise PluginError(
-            f"No adapter registered for transport '{transport_key}'. "
-            f"Available: {available}"
+            f"No adapter registered for transport '{transport_key}'. Available: {available}"
         )
     return _REGISTRY[transport_key]
 
 
-def list_adapters() -> dict[str, "SourceAdapter"]:
+def list_adapters() -> dict[str, SourceAdapter]:
     """Return a copy of the full registry (for inspection / debugging)."""
     _ensure_loaded()
     return dict(_REGISTRY)

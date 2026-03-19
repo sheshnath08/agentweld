@@ -24,7 +24,7 @@ _ENTRY_POINT_GROUP = "agentforge.adapters"
 logger = logging.getLogger(__name__)
 
 
-def load_plugin_adapters() -> dict[str, "SourceAdapter"]:
+def load_plugin_adapters() -> dict[str, SourceAdapter]:
     """Discover and load all adapters registered under the entry-point group.
 
     Returns:

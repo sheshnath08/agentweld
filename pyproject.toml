@@ -43,6 +43,10 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    "B008",  # typer.Option() in function defaults is the required Typer pattern
+    "B904",  # raise typer.Exit() inside except is intentional CLI flow control
+]
 
 [tool.mypy]
 python_version = "3.11"

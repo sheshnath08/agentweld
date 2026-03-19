@@ -2,28 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
+from agentforge.models.composed import ComposedToolSet, RoutingEntry
 from agentforge.models.config import AgentForgeConfig
 from agentforge.models.tool import ToolDefinition
 from agentforge.utils.errors import CompositionError
 
-
-@dataclass
-class RoutingEntry:
-    """Maps a resolved tool name back to the originating source."""
-
-    source_id: str
-    original_name: str
-
-
-@dataclass
-class ComposedToolSet:
-    """The result of the composition stage."""
-
-    tools: list[ToolDefinition]
-    routing_map: dict[str, RoutingEntry]
-    skill_map: dict[str, list[str]] = field(default_factory=dict)  # skill_id → [tool_names]
+__all__ = ["Composer", "ComposedToolSet", "RoutingEntry"]
 
 
 class Composer:
@@ -89,7 +73,8 @@ class Composer:
                     # Update skill_ids on tools
                     resolved = [
                         t.model_copy(update={"skill_ids": list(set(t.skill_ids + [skill.id]))})
-                        if t.name in matched else t
+                        if t.name in matched
+                        else t
                         for t in resolved
                     ]
 

@@ -9,10 +9,10 @@ app = typer.Typer(
 )
 
 # Import and register each command function directly on the root app
-from agentforge.cli.init import init  # noqa: E402
 from agentforge.cli.add import add  # noqa: E402
-from agentforge.cli.inspect import inspect  # noqa: E402
 from agentforge.cli.generate import generate  # noqa: E402
+from agentforge.cli.init import init  # noqa: E402
+from agentforge.cli.inspect import inspect  # noqa: E402
 from agentforge.cli.preview import preview  # noqa: E402
 
 app.command(name="init")(init)

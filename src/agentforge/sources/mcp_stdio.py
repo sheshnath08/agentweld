@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 import anyio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.types import Tool as MCPTool
 
 from agentforge.models.tool import ToolDefinition
 from agentforge.utils.errors import SourceConnectionError
@@ -39,7 +40,7 @@ class MCPStdioAdapter:
     environment before the subprocess is spawned.
     """
 
-    async def introspect(self, config: "SourceConfig") -> list[ToolDefinition]:
+    async def introspect(self, config: SourceConfig) -> list[ToolDefinition]:
         """Spawn the server, call tools/list, terminate, return ToolDefinitions.
 
         Args:
@@ -92,12 +93,10 @@ class MCPStdioAdapter:
             ) from exc
 
         tools = self._normalize(config.id, result.tools)
-        logger.info(
-            "Source '%s' returned %d tool(s).", config.id, len(tools)
-        )
+        logger.info("Source '%s' returned %d tool(s).", config.id, len(tools))
         return tools
 
-    async def health_check(self, config: "SourceConfig") -> bool:
+    async def health_check(self, config: SourceConfig) -> bool:
         """Return True if the server can be contacted; False on any error."""
         try:
             tools = await self.introspect(config)
@@ -121,7 +120,7 @@ class MCPStdioAdapter:
         return resolved
 
     @staticmethod
-    def _normalize(source_id: str, mcp_tools: list) -> list[ToolDefinition]:
+    def _normalize(source_id: str, mcp_tools: list[MCPTool]) -> list[ToolDefinition]:
         """Convert raw MCP Tool objects to ToolDefinition instances."""
         result: list[ToolDefinition] = []
         for tool in mcp_tools:
@@ -136,7 +135,5 @@ class MCPStdioAdapter:
                     )
                 )
             except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "Skipping tool '%s' from source '%s': %s", tool.name, source_id, exc
-                )
+                logger.warning("Skipping tool '%s' from source '%s': %s", tool.name, source_id, exc)
         return result

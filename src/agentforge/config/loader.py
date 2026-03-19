@@ -20,11 +20,12 @@ _yaml.preserve_quotes = True
 def _interpolate_env(value: object) -> object:
     """Recursively replace ${VAR} tokens with environment variable values."""
     if isinstance(value, str):
-        def _replace(m: re.Match) -> str:
+
+        def _replace(m: re.Match[str]) -> str:
             var = m.group(1)
             result = os.environ.get(var)
             if result is None:
-                return m.group(0)  # leave unreplaced — Pydantic will validate later
+                return str(m.group(0))  # leave unreplaced — Pydantic will validate later
             return result
 
         return _ENV_VAR_RE.sub(_replace, value)
@@ -65,6 +66,8 @@ def load_config(path: Path | str | None = None) -> AgentForgeConfig:
     raw = _read_yaml(resolved)
     plain = _ruamel_to_plain(raw)
     interpolated = _interpolate_env(plain)
+    if not isinstance(interpolated, dict):
+        raise ConfigValidationError(f"{resolved} must be a YAML mapping at the root level.")
     return _validate(interpolated, resolved)
 
 
@@ -91,7 +94,7 @@ def _resolve_path(path: Path | str | None) -> Path:
     )
 
 
-def _read_yaml(path: Path) -> dict:
+def _read_yaml(path: Path) -> dict[str, object]:
     try:
         with path.open("r", encoding="utf-8") as fh:
             data = _yaml.load(fh)
@@ -102,15 +105,13 @@ def _read_yaml(path: Path) -> dict:
         raise ConfigValidationError(f"{path} is empty.")
     if not isinstance(data, dict):
         raise ConfigValidationError(f"{path} must be a YAML mapping at the root level.")
-    return data
+    return dict(data)
 
 
-def _validate(data: dict, path: Path) -> AgentForgeConfig:
+def _validate(data: dict[str, object], path: Path) -> AgentForgeConfig:
     from pydantic import ValidationError
 
     try:
         return AgentForgeConfig.model_validate(data)
     except ValidationError as exc:
-        raise ConfigValidationError(
-            f"Validation failed for {path}:\n{exc}"
-        ) from exc
+        raise ConfigValidationError(f"Validation failed for {path}:\n{exc}") from exc

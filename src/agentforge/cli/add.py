@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Literal
 
 import anyio
 import typer
@@ -16,7 +16,10 @@ from agentforge.sources.registry import get_adapter
 from agentforge.utils.console import console, make_tools_table
 from agentforge.utils.errors import AgentForgeError, ConfigNotFoundError, SourceConnectionError
 
-app = typer.Typer(help="Add a new MCP source to an existing agentforge project.", invoke_without_command=True)
+app = typer.Typer(
+    help="Add a new MCP source to an existing agentforge project.",
+    invoke_without_command=True,
+)
 
 
 @app.command()
@@ -24,12 +27,14 @@ def add(
     source: str = typer.Argument(..., help="MCP server command (stdio) or URL (http)"),
     from_: str = typer.Option("mcp", "--from", help="Source type"),
     trust: bool = typer.Option(False, "--trust", help="Trust and execute the stdio command"),
-    config_path: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to agentforge.yaml"),
+    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to agentforge.yaml"),
 ) -> None:
     """Load existing agentforge.yaml, introspect new source, and append it."""
 
     # Determine transport
-    transport = "streamable-http" if source.startswith("http") else "stdio"
+    transport: Literal["stdio", "streamable-http"] = (
+        "streamable-http" if source.startswith("http") else "stdio"
+    )
 
     # Safety gate for stdio
     if transport == "stdio":
@@ -41,8 +46,7 @@ def add(
             )
             raise typer.Exit(code=1)
         console.print(
-            "[bold yellow]WARNING:[/] --trust flag set. Spawning subprocess: "
-            f"[bold]{source}[/]",
+            f"[bold yellow]WARNING:[/] --trust flag set. Spawning subprocess: [bold]{source}[/]",
             highlight=False,
         )
 
@@ -120,7 +124,7 @@ def _derive_source_id(source: str) -> str:
     return segments[-1] if segments else slug[:20]
 
 
-def _resolve_yaml_path(config_path: Optional[Path]) -> Path:
+def _resolve_yaml_path(config_path: Path | None) -> Path:
     """Resolve path to agentforge.yaml, searching from cwd if not specified."""
     if config_path is not None:
         return Path(config_path)

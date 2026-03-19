@@ -571,11 +571,14 @@ class TestGenerateCommand:
         mock_adapter = MagicMock()
         mock_adapter.introspect = AsyncMock(return_value=low_quality_tools)
 
+        # Mock CurationEngine to return the pre-scored low-quality tools unchanged
+        mock_engine = MagicMock()
+        mock_engine.run.return_value = low_quality_tools
+
         with (
             patch("agentforge.cli.generate.load_config", return_value=cfg),
             patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
-            # Make sure CurationEngine is None so quality gate runs on raw tools
-            patch("agentforge.cli.generate.CurationEngine", None),
+            patch("agentforge.cli.generate.CurationEngine", return_value=mock_engine),
         ):
             result = runner.invoke(app, ["generate"])
 
@@ -613,23 +616,27 @@ class TestPreviewCommand:
         assert result.exit_code == 0
         assert "No sources" in result.output
 
-    def test_preview_shows_summary_without_generators(self, github_tools):
-        """preview without generators should show a pipeline summary."""
+    def test_preview_shows_artifact_contents(self, github_tools):
+        """preview should run generators and show artifact contents."""
         cfg = _make_config("github")
         mock_adapter = MagicMock()
         mock_adapter.introspect = AsyncMock(return_value=github_tools)
 
+        def _mock_run_generators(cfg, tools, composed, output_dir, only, force):
+            out = output_dir / "agent.json"
+            out.write_text('{"name": "Test Agent"}', encoding="utf-8")
+            return [out]
+
         with (
             patch("agentforge.cli.preview.load_config", return_value=cfg),
             patch("agentforge.cli.preview.get_adapter", return_value=mock_adapter),
-            patch("agentforge.cli.preview.run_generators", None),
-            patch("agentforge.cli.preview.CurationEngine", None),
+            patch("agentforge.cli.preview.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(app, ["preview"])
 
         assert result.exit_code == 0, result.output
-        # Should mention the agent name or tool count
-        assert "Test Agent" in result.output or str(len(github_tools)) in result.output
+        # Should show preview header and artifact contents
+        assert "Preview" in result.output or "Test Agent" in result.output
 
     def test_preview_uses_temp_directory(self, github_tools):
         """preview should not write to the configured output_dir."""
@@ -650,7 +657,6 @@ class TestPreviewCommand:
             patch("agentforge.cli.preview.load_config", return_value=cfg),
             patch("agentforge.cli.preview.get_adapter", return_value=mock_adapter),
             patch("agentforge.cli.preview.run_generators", _mock_run_generators),
-            patch("agentforge.cli.preview.CurationEngine", None),
         ):
             result = runner.invoke(app, ["preview"])
 
@@ -659,3 +665,64 @@ class TestPreviewCommand:
         if captured_output_dirs:
             assert permanent_output not in captured_output_dirs[0]
             assert "agentforge_preview_" in captured_output_dirs[0] or "tmp" in captured_output_dirs[0].lower()
+
+
+# ── generate pipeline end-to-end ──────────────────────────────────────────────
+
+
+class TestGeneratePipeline:
+    def test_generate_writes_artifacts(self, tmp_path, github_tools):
+        """generate should run the full pipeline and report written artifact paths."""
+        from agentforge.models.composed import ComposedToolSet
+
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path / "agent")
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        # run_generators writes a dummy file and returns its path
+        dummy_artifact = tmp_path / "agent" / "agent.json"
+
+        def _mock_run_generators(cfg, tools, composed, output_dir, only, force):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            out = output_dir / "agent.json"
+            out.write_text("{}", encoding="utf-8")
+            return [out]
+
+        with (
+            patch("agentforge.cli.generate.load_config", return_value=cfg),
+            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentforge.cli.generate.run_generators", _mock_run_generators),
+        ):
+            result = runner.invoke(app, ["generate", "--force"])
+
+        assert result.exit_code == 0, result.output
+        assert "Generated" in result.output or "agent.json" in result.output
+
+    def test_generate_runner_called_with_only_flag(self, tmp_path, github_tools):
+        """generate --only should pass the filter through to run_generators."""
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path / "agent")
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        captured_only: list[list[str] | None] = []
+
+        def _mock_run_generators(cfg, tools, composed, output_dir, only, force):
+            captured_only.append(only)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            return []
+
+        with (
+            patch("agentforge.cli.generate.load_config", return_value=cfg),
+            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentforge.cli.generate.run_generators", _mock_run_generators),
+        ):
+            result = runner.invoke(
+                app, ["generate", "--force", "--only", "agent_card", "--only", "readme"]
+            )
+
+        assert result.exit_code == 0, result.output
+        assert captured_only[0] == ["agent_card", "readme"]
