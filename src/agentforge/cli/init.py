@@ -137,8 +137,21 @@ def _extract_docker_image(parts: list[str]) -> str:
 
     Skips flags (starting with '-') and their values for known value-taking flags.
     """
-    _VALUE_FLAGS = {"-e", "--env", "-p", "--publish", "--name", "-v", "--volume",
-                   "--network", "-u", "--user", "--entrypoint", "-w", "--workdir"}
+    _VALUE_FLAGS = {
+        "-e",
+        "--env",
+        "-p",
+        "--publish",
+        "--name",
+        "-v",
+        "--volume",
+        "--network",
+        "-u",
+        "--user",
+        "--entrypoint",
+        "-w",
+        "--workdir",
+    }
     skip_next = False
     past_run = False
     for token in parts:

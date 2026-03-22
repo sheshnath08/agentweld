@@ -105,9 +105,7 @@ class MCPStdioAdapter:
             ) from exc
 
         if mcp_result is None:
-            raise SourceConnectionError(
-                f"Source '{config.id}': introspection returned no result."
-            )
+            raise SourceConnectionError(f"Source '{config.id}': introspection returned no result.")
 
         result = mcp_result
 
