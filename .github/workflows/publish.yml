@@ -1,0 +1,42 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write   # Required for OIDC trusted publishing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv pip install --system build
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi   # Requires a "pypi" environment configured in repo settings
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        # Authentication is handled by OIDC trusted publishing — no API token needed.
+        # One-time setup required:
+        #   1. Create the PyPI project "agentforge"
+        #   2. PyPI project settings → Publishing → Add a trusted publisher:
+        #      Owner: sheshnath08  |  Repo: agentforge  |  Workflow: publish.yml  |  Env: pypi
+        #   3. GitHub repo settings → Environments → create "pypi" environment

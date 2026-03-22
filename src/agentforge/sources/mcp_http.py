@@ -14,6 +14,7 @@ import anyio
 import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
+from mcp.types import Tool as MCPTool
 
 from agentforge.models.tool import ToolDefinition
 from agentforge.utils.errors import SourceConnectionError
@@ -33,7 +34,7 @@ class MCPHttpAdapter:
     introspect time (never stored in the model).
     """
 
-    async def introspect(self, config: "SourceConfig") -> list[ToolDefinition]:
+    async def introspect(self, config: SourceConfig) -> list[ToolDefinition]:
         """Connect to the HTTP MCP server, call tools/list, return ToolDefinitions.
 
         Args:
@@ -81,7 +82,7 @@ class MCPHttpAdapter:
         logger.info("Source '%s' returned %d tool(s).", config.id, len(tools))
         return tools
 
-    async def health_check(self, config: "SourceConfig") -> bool:
+    async def health_check(self, config: SourceConfig) -> bool:
         """Return True if the server responds; False on any error."""
         try:
             await self.introspect(config)
@@ -93,7 +94,7 @@ class MCPHttpAdapter:
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _build_headers(config: "SourceConfig") -> dict[str, str]:
+    def _build_headers(config: SourceConfig) -> dict[str, str]:
         """Build HTTP request headers, resolving auth tokens from the environment."""
         headers: dict[str, str] = {}
         if config.auth is not None and config.auth.type == "bearer":
@@ -109,7 +110,7 @@ class MCPHttpAdapter:
         return headers
 
     @staticmethod
-    def _normalize(source_id: str, mcp_tools: list) -> list[ToolDefinition]:
+    def _normalize(source_id: str, mcp_tools: list[MCPTool]) -> list[ToolDefinition]:
         """Convert raw MCP Tool objects to ToolDefinition instances."""
         result: list[ToolDefinition] = []
         for tool in mcp_tools:
@@ -124,7 +125,5 @@ class MCPHttpAdapter:
                     )
                 )
             except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "Skipping tool '%s' from source '%s': %s", tool.name, source_id, exc
-                )
+                logger.warning("Skipping tool '%s' from source '%s': %s", tool.name, source_id, exc)
         return result

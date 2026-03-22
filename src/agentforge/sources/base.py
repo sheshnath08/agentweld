@@ -24,7 +24,7 @@ class SourceAdapter(Protocol):
     - Any third-party plugin that conforms to this shape
     """
 
-    async def introspect(self, config: "SourceConfig") -> list["ToolDefinition"]:
+    async def introspect(self, config: SourceConfig) -> list[ToolDefinition]:
         """Connect to the source and return its full tool list as ToolDefinitions.
 
         Args:
@@ -38,7 +38,7 @@ class SourceAdapter(Protocol):
         """
         ...
 
-    async def health_check(self, config: "SourceConfig") -> bool:
+    async def health_check(self, config: SourceConfig) -> bool:
         """Return True if the source is reachable; False otherwise.
 
         Should not raise — swallow connection errors and return False.

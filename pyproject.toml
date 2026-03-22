@@ -4,7 +4,23 @@ version = "0.1.0"
 description = "Turn any MCP server into a curated, composable, A2A-ready agent."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
+authors = [
+  { name = "Sheshnath Yadav", email = "sheshnathyadav08@gmail.com" },
+]
+keywords = ["mcp", "model-context-protocol", "agent", "a2a", "llm", "tool-curation", "agentic"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Code Generators",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
 dependencies = [
     "typer[all]>=0.12",
     "pydantic>=2.7",
@@ -26,6 +42,12 @@ dev = [
     "mypy>=1.10",
 ]
 
+[project.urls]
+Homepage = "https://github.com/sheshnath08/agentforge"
+Repository = "https://github.com/sheshnath08/agentforge"
+"Bug Tracker" = "https://github.com/sheshnath08/agentforge/issues"
+Changelog = "https://github.com/sheshnath08/agentforge/blob/main/CHANGELOG.md"
+
 [project.scripts]
 agentforge = "agentforge.cli.main:app"
 
@@ -36,6 +58,17 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentforge"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/",
+  "tests/",
+  "LICENSE",
+  "README.md",
+  "CHANGELOG.md",
+  "CONTRIBUTING.md",
+  "pyproject.toml",
+]
+
 [tool.ruff]
 src = ["src"]
 target-version = "py311"
@@ -43,6 +76,10 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    "B008",  # typer.Option() in function defaults is the required Typer pattern
+    "B904",  # raise typer.Exit() inside except is intentional CLI flow control
+]
 
 [tool.mypy]
 python_version = "3.11"

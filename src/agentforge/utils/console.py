@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from rich.console import Console
 from rich.table import Table
 from rich.theme import Theme
@@ -58,7 +60,7 @@ def score_display(score: float | None) -> str:
     return f"[{style}]{score:.2f}{indicator}[/]"
 
 
-def make_sources_table(rows: list[dict]) -> Table:
+def make_sources_table(rows: list[dict[str, Any]]) -> Table:
     """Build a Rich table for `agentforge inspect` sources summary.
 
     Each row dict: {source, tools, avg_quality}
@@ -77,7 +79,7 @@ def make_sources_table(rows: list[dict]) -> Table:
     return table
 
 
-def make_tools_table(tools: list[dict], show_quality: bool = False) -> Table:
+def make_tools_table(tools: list[dict[str, Any]], show_quality: bool = False) -> Table:
     """Build a Rich table listing tools.
 
     Each tool dict: {name, description, source_id, quality_score}

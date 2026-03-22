@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-
 # ── A2A Agent Card (agent_card.json) ─────────────────────────────────────────
+
 
 class AgentCardSkill(BaseModel):
     id: str
@@ -30,10 +30,12 @@ class AgentCard(BaseModel):
 
     def to_json(self, indent: int = 2) -> str:
         import json
+
         return json.dumps(self.model_dump(exclude_none=True), indent=indent)
 
 
 # ── Tool Manifest (mcp.json) ──────────────────────────────────────────────────
+
 
 class StdioServerEntry(BaseModel):
     command: str
@@ -55,4 +57,5 @@ class ToolManifest(BaseModel):
 
     def to_json(self, indent: int = 2) -> str:
         import json
+
         return json.dumps(self.model_dump(exclude_none=True), indent=indent)

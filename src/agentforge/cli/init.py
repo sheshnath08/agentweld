@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Literal
 
 import anyio
 import typer
@@ -26,7 +26,10 @@ from agentforge.sources.registry import get_adapter
 from agentforge.utils.console import console, make_tools_table
 from agentforge.utils.errors import AgentForgeError, SourceConnectionError
 
-app = typer.Typer(help="Initialize a new agentforge project from an MCP source.", invoke_without_command=True)
+app = typer.Typer(
+    help="Initialize a new agentforge project from an MCP source.",
+    invoke_without_command=True,
+)
 
 
 @app.command()
@@ -35,12 +38,14 @@ def init(
     from_: str = typer.Option("mcp", "--from", help="Source type"),
     trust: bool = typer.Option(False, "--trust", help="Trust and execute the stdio command"),
     output: Path = typer.Option(Path("."), "--output", "-o", help="Output directory"),
-    name: Optional[str] = typer.Option(None, "--name", "-n", help="Agent name"),
+    name: str | None = typer.Option(None, "--name", "-n", help="Agent name"),
 ) -> None:
     """Connect to MCP server, introspect tools, scaffold agentforge.yaml."""
 
     # Determine transport
-    transport = "streamable-http" if source.startswith("http") else "stdio"
+    transport: Literal["stdio", "streamable-http"] = (
+        "streamable-http" if source.startswith("http") else "stdio"
+    )
 
     # Safety gate for stdio
     if transport == "stdio":
@@ -52,8 +57,7 @@ def init(
             )
             raise typer.Exit(code=1)
         console.print(
-            "[bold yellow]WARNING:[/] --trust flag set. Spawning subprocess: "
-            f"[bold]{source}[/]",
+            f"[bold yellow]WARNING:[/] --trust flag set. Spawning subprocess: [bold]{source}[/]",
             highlight=False,
         )
 
@@ -107,15 +111,66 @@ def _derive_source_id(source: str) -> str:
 
     Examples:
         "npx @modelcontextprotocol/server-github" -> "github"
+        "docker run -i --rm -e TOKEN ghcr.io/github/github-mcp-server" -> "github"
         "https://api.example.com/mcp" -> "example"
     """
     parts = source.replace("https://", "").replace("http://", "").split()
-    token = parts[-1] if parts else source
+    # For docker commands, find the image argument (last non-flag token after "run")
+    if parts and parts[0] == "docker":
+        image = _extract_docker_image(parts)
+        token = image.split("/")[-1] if image else parts[-1]
+    else:
+        token = parts[-1] if parts else source
     slug = re.sub(r"[^a-z0-9]", "-", token.lower())
     slug = re.sub(r"-+", "-", slug).strip("-")
-    # Take the last meaningful segment (length > 2)
     segments = [s for s in slug.split("-") if len(s) > 2]
+    # For docker images and similar "name-type-suffix" patterns, prefer the first
+    # meaningful segment (e.g. "github-mcp-server" -> "github").
+    # For npx packages like "server-github", prefer the last (-> "github").
+    if parts and parts[0] == "docker":
+        return segments[0] if segments else slug[:20]
     return segments[-1] if segments else slug[:20]
+
+
+def _extract_docker_image(parts: list[str]) -> str:
+    """Return the image name from a 'docker run ...' token list.
+
+    Skips flags (starting with '-') and their values for known value-taking flags.
+    """
+    _VALUE_FLAGS = {
+        "-e",
+        "--env",
+        "-p",
+        "--publish",
+        "--name",
+        "-v",
+        "--volume",
+        "--network",
+        "-u",
+        "--user",
+        "--entrypoint",
+        "-w",
+        "--workdir",
+    }
+    skip_next = False
+    past_run = False
+    for token in parts:
+        if token == "run":
+            past_run = True
+            continue
+        if not past_run:
+            continue
+        if skip_next:
+            skip_next = False
+            continue
+        if token in _VALUE_FLAGS:
+            skip_next = True
+            continue
+        if token.startswith("-"):
+            continue
+        # First non-flag token after 'run' is the image
+        return token
+    return ""
 
 
 def _derive_agent_name(source: str) -> str:
@@ -124,7 +179,7 @@ def _derive_agent_name(source: str) -> str:
 
 
 def _build_initial_config(agent_name: str, source: SourceConfig) -> AgentForgeConfig:
-    now = datetime.datetime.now(tz=datetime.timezone.utc).replace(microsecond=0)
+    now = datetime.datetime.now(tz=datetime.UTC).replace(microsecond=0)
     return AgentForgeConfig(
         meta=MetaConfig(created_at=now, updated_at=now),
         agent=AgentConfig(

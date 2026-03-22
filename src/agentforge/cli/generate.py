@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import anyio
 import typer
 
+from agentforge.composition.composer import ComposedToolSet, Composer
 from agentforge.config.loader import load_config
+from agentforge.curation.engine import CurationEngine
+from agentforge.generators.runner import run_generators
 from agentforge.models.config import AgentForgeConfig, SourceConfig
 from agentforge.models.tool import ToolDefinition
 from agentforge.sources.registry import get_adapter
@@ -20,21 +22,6 @@ from agentforge.utils.errors import (
     SourceConnectionError,
 )
 
-# STUB: replace with real import after phase-4/5 merge
-try:
-    from agentforge.curation.engine import CurationEngine
-    from agentforge.composition.composer import ComposedToolSet, Composer
-except ImportError:
-    CurationEngine = None  # type: ignore[assignment,misc]
-    Composer = None  # type: ignore[assignment,misc]
-    ComposedToolSet = None  # type: ignore[assignment,misc]
-
-# STUB: replace with real import after phase-5 merge
-try:
-    from agentforge.generators.runner import run_generators
-except ImportError:
-    run_generators = None  # type: ignore[assignment]
-
 app = typer.Typer(help="Run the full pipeline and generate artifacts.", invoke_without_command=True)
 
 
@@ -42,8 +29,10 @@ app = typer.Typer(help="Run the full pipeline and generate artifacts.", invoke_w
 def generate(
     force: bool = typer.Option(False, "--force", help="Overwrite existing artifacts"),
     only: list[str] = typer.Option([], "--only", help="Only generate specific artifacts"),
-    config_path: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to agentforge.yaml"),
-    output_dir: Optional[Path] = typer.Option(None, "--output-dir", "-o", help="Override output directory"),
+    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to agentforge.yaml"),
+    output_dir: Path | None = typer.Option(
+        None, "--output-dir", "-o", help="Override output directory"
+    ),
 ) -> None:
     """Full pipeline: load config → introspect → curate → compose → generate artifacts."""
 
@@ -52,9 +41,7 @@ def generate(
         cfg = load_config(config_path)
     except ConfigNotFoundError as e:
         console.print(f"[red]Config not found:[/] {e}")
-        console.print(
-            "[muted]Run [bold]agentforge init[/] to create an agentforge.yaml first.[/]"
-        )
+        console.print("[muted]Run [bold]agentforge init[/] to create an agentforge.yaml first.[/]")
         raise typer.Exit(code=1)
 
     if not cfg.sources:
@@ -73,9 +60,7 @@ def generate(
                 adapter = get_adapter(transport)
                 tools = await adapter.introspect(src_cfg)
                 all_tools.extend(tools)
-                console.print(
-                    f"  [green]✓[/] {src_cfg.id}: {len(tools)} tool(s)"
-                )
+                console.print(f"  [green]✓[/] {src_cfg.id}: {len(tools)} tool(s)")
             except SourceConnectionError as e:
                 errors[src_cfg.id] = str(e)
                 console.print(f"  [red]✗[/] {src_cfg.id}: {e}")
@@ -101,21 +86,13 @@ def generate(
     console.print(f"[cyan]Total tools discovered:[/] {len(all_tools)}")
 
     # 3. Curate
-    curated_tools = all_tools
-    if CurationEngine is not None:
-        console.print("[cyan]Running curation engine...[/]")
-        try:
-            engine = CurationEngine(cfg)
-            curated_tools = engine.run(all_tools)
-        except AgentForgeError as e:
-            console.print(f"[red]Curation error:[/] {e}")
-            raise typer.Exit(code=1)
-    else:
-        console.print(
-            "[yellow]WARNING:[/] CurationEngine not available (Phase 4 not merged). "
-            "Skipping curation.",
-            highlight=False,
-        )
+    console.print("[cyan]Running curation engine...[/]")
+    try:
+        engine = CurationEngine(cfg)
+        curated_tools = engine.run(all_tools)
+    except AgentForgeError as e:
+        console.print(f"[red]Curation error:[/] {e}")
+        raise typer.Exit(code=1)
 
     # 4. Quality gate
     if not force:
@@ -126,21 +103,14 @@ def generate(
             raise typer.Exit(code=1)
 
     # 5. Compose
-    composed: object = None
-    if Composer is not None:
-        console.print("[cyan]Composing tool namespace...[/]")
-        try:
-            composer = Composer(cfg)
-            composed = composer.compose(curated_tools)
-        except AgentForgeError as e:
-            console.print(f"[red]Composition error:[/] {e}")
-            raise typer.Exit(code=1)
-    else:
-        console.print(
-            "[yellow]WARNING:[/] Composer not available (Phase 4 not merged). "
-            "Skipping composition.",
-            highlight=False,
-        )
+    console.print("[cyan]Composing tool namespace...[/]")
+    composed: ComposedToolSet | None = None
+    try:
+        composer = Composer(cfg)
+        composed = composer.compose(curated_tools)
+    except AgentForgeError as e:
+        console.print(f"[red]Composition error:[/] {e}")
+        raise typer.Exit(code=1)
 
     # 6. Generate artifacts
     out_dir = output_dir or Path(cfg.generate.output_dir)
@@ -152,40 +122,26 @@ def generate(
         )
         raise typer.Exit(code=1)
 
-    if run_generators is not None:
-        console.print(f"[cyan]Generating artifacts in[/] {out_dir}...")
-        try:
-            artifacts = run_generators(
-                cfg=cfg,
-                tools=curated_tools,
-                composed=composed,
-                output_dir=out_dir,
-                only=only or None,
-                force=force,
-            )
-            _print_artifact_summary(artifacts, out_dir)
-        except AgentForgeError as e:
-            console.print(f"[red]Generator error:[/] {e}")
-            raise typer.Exit(code=1)
-    else:
-        console.print(
-            "[yellow]WARNING:[/] Generators not available (Phase 5 not merged). "
-            "Skipping artifact generation.",
-            highlight=False,
+    console.print(f"[cyan]Generating artifacts in[/] {out_dir}...")
+    try:
+        artifacts = run_generators(
+            cfg=cfg,
+            tools=curated_tools,
+            composed=composed,
+            output_dir=out_dir,
+            only=only or None,
+            force=force,
         )
-        console.print(
-            f"[green]Pipeline complete.[/] {len(curated_tools)} tool(s) curated. "
-            f"Output would go to: [bold]{out_dir}[/]"
-        )
+        _print_artifact_summary(artifacts, out_dir)
+    except AgentForgeError as e:
+        console.print(f"[red]Generator error:[/] {e}")
+        raise typer.Exit(code=1)
 
 
 def _check_quality_gate(tools: list[ToolDefinition], cfg: AgentForgeConfig) -> None:
     """Raise QualityGateError if any tool is below the block_below threshold."""
     block_below = cfg.quality.block_below
-    blocking = [
-        t for t in tools
-        if t.quality_score is not None and t.quality_score < block_below
-    ]
+    blocking = [t for t in tools if t.quality_score is not None and t.quality_score < block_below]
     if blocking:
         names = ", ".join(t.name for t in blocking[:5])
         if len(blocking) > 5:

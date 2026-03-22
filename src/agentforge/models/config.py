@@ -7,8 +7,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-
 # ── Auth ──────────────────────────────────────────────────────────────────────
+
 
 class BearerAuth(BaseModel):
     type: Literal["bearer"]
@@ -19,6 +19,7 @@ AuthConfig = Annotated[BearerAuth, Field(discriminator="type")]
 
 
 # ── Sources ───────────────────────────────────────────────────────────────────
+
 
 class SourceConfig(BaseModel):
     id: str
@@ -33,7 +34,7 @@ class SourceConfig(BaseModel):
     env: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def validate_transport_fields(self) -> "SourceConfig":
+    def validate_transport_fields(self) -> SourceConfig:
         if self.type == "mcp_server":
             if self.transport == "stdio" and not self.command:
                 raise ValueError(f"Source '{self.id}': stdio transport requires 'command'")
@@ -44,12 +45,13 @@ class SourceConfig(BaseModel):
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
 
+
 class SourceToolFilter(BaseModel):
     include: list[str] | None = None
     exclude: list[str] | None = None
 
     @model_validator(mode="after")
-    def not_both(self) -> "SourceToolFilter":
+    def not_both(self) -> SourceToolFilter:
         if self.include is not None and self.exclude is not None:
             raise ValueError("Cannot specify both 'include' and 'exclude' for a source.")
         return self
@@ -66,12 +68,14 @@ class ToolsConfig(BaseModel):
 
 # ── Quality ───────────────────────────────────────────────────────────────────
 
+
 class QualityConfig(BaseModel):
     warn_below: float = 0.6
     block_below: float = 0.4
 
 
 # ── Enrichment ────────────────────────────────────────────────────────────────
+
 
 class EnrichmentConfig(BaseModel):
     provider: Literal["anthropic", "openai"] = "anthropic"
@@ -81,12 +85,14 @@ class EnrichmentConfig(BaseModel):
 
 # ── Composition ───────────────────────────────────────────────────────────────
 
+
 class CompositionConfig(BaseModel):
     conflict_strategy: Literal["prefix", "explicit", "error"] = "prefix"
     prefix_separator: str = "__"
 
 
 # ── A2A ───────────────────────────────────────────────────────────────────────
+
 
 class SkillConfig(BaseModel):
     id: str
@@ -107,6 +113,7 @@ class A2AConfig(BaseModel):
 
 # ── Generation ────────────────────────────────────────────────────────────────
 
+
 class EmitConfig(BaseModel):
     agent_card: bool = True
     tool_manifest: bool = True
@@ -122,6 +129,7 @@ class GenerateConfig(BaseModel):
 
 # ── Meta ──────────────────────────────────────────────────────────────────────
 
+
 class MetaConfig(BaseModel):
     agentforge_version: str = "0.1"
     created_at: datetime | None = None
@@ -130,6 +138,7 @@ class MetaConfig(BaseModel):
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
 
+
 class AgentConfig(BaseModel):
     name: str
     description: str = ""
@@ -137,6 +146,7 @@ class AgentConfig(BaseModel):
 
 
 # ── Root ──────────────────────────────────────────────────────────────────────
+
 
 class AgentForgeConfig(BaseModel):
     """Root model for agentforge.yaml."""

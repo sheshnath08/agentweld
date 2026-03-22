@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from agentforge.models.config import AgentForgeConfig
-from agentforge.models.tool import ToolDefinition
 from agentforge.curation.quality import QualityScanner
 from agentforge.curation.rules import RuleBasedCurator
+from agentforge.models.config import AgentForgeConfig
+from agentforge.models.tool import ToolDefinition
 
 
 class CurationEngine:

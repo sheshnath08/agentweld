@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class QualityFlag(str, Enum):
+class QualityFlag(StrEnum):
     MISSING_DESCRIPTION = "missing_description"
     WEAK_DESCRIPTION = "weak_description"
     POOR_NAMING = "poor_naming"
@@ -28,9 +29,7 @@ class ToolDefinition(BaseModel):
     """
 
     # Identity
-    id: str = Field(
-        description='Stable internal ID in the format "{source_id}::{tool_name}"'
-    )
+    id: str = Field(description='Stable internal ID in the format "{source_id}::{tool_name}"')
     name: str = Field(description="Agent-facing name. Mutable by curation/renaming.")
 
     # Descriptions — original is immutable, curated is writable
@@ -38,12 +37,15 @@ class ToolDefinition(BaseModel):
         description="Description from the source server. Never modified after construction."
     )
     description_curated: str = Field(
-        description="Starts as a copy of description_original. Overwritten by enrichment or manual override."
+        description=(
+            "Starts as a copy of description_original. "
+            "Overwritten by enrichment or manual override."
+        )
     )
 
     # Schemas
-    input_schema: dict = Field(default_factory=dict)
-    output_schema: dict | None = None
+    input_schema: dict[str, Any] = Field(default_factory=dict)
+    output_schema: dict[str, Any] | None = None
 
     # Provenance
     source_id: str = Field(description="Which source entry in agentforge.yaml this came from.")
@@ -80,9 +82,9 @@ class ToolDefinition(BaseModel):
         source_id: str,
         tool_name: str,
         description: str,
-        input_schema: dict,
-        output_schema: dict | None = None,
-    ) -> "ToolDefinition":
+        input_schema: dict[str, Any],
+        output_schema: dict[str, Any] | None = None,
+    ) -> ToolDefinition:
         """Convenience constructor for MCP adapter normalization."""
         return cls(
             id=f"{source_id}::{tool_name}",
