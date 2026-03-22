@@ -76,21 +76,40 @@ class MCPStdioAdapter:
             " ".join(args),
         )
 
+        mcp_result = None
         try:
             with anyio.fail_after(_INTROSPECT_TIMEOUT):
                 async with stdio_client(server_params) as (read_stream, write_stream):
                     async with ClientSession(read_stream, write_stream) as session:
                         await session.initialize()
-                        result = await session.list_tools()
+                        mcp_result = await session.list_tools()
         except TimeoutError as exc:
             raise SourceConnectionError(
                 f"Source '{config.id}': timed out after {_INTROSPECT_TIMEOUT}s "
                 f"waiting for tools/list response."
             ) from exc
+        except ExceptionGroup as exc:
+            # anyio TaskGroup wraps errors raised during stdio_client teardown.
+            # If list_tools() already succeeded, the exception is just the server
+            # closing the pipe on exit — safe to ignore.
+            if mcp_result is None:
+                leaf: BaseException = exc
+                while isinstance(leaf, ExceptionGroup):
+                    leaf = leaf.exceptions[0]
+                raise SourceConnectionError(
+                    f"Source '{config.id}': failed to introspect via stdio — {leaf}"
+                ) from leaf
         except Exception as exc:
             raise SourceConnectionError(
                 f"Source '{config.id}': failed to introspect via stdio — {exc}"
             ) from exc
+
+        if mcp_result is None:
+            raise SourceConnectionError(
+                f"Source '{config.id}': introspection returned no result."
+            )
+
+        result = mcp_result
 
         tools = self._normalize(config.id, result.tools)
         logger.info("Source '%s' returned %d tool(s).", config.id, len(tools))

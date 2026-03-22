@@ -60,13 +60,25 @@ GENERATORS → agent_card.json, mcp.json, system_prompt.md, README.md
 | `src/agentforge/models/tool.py` | `ToolDefinition` + `QualityFlag` enum — central data model |
 | `src/agentforge/models/config.py` | `AgentForgeConfig` — full `agentforge.yaml` schema (Pydantic) |
 | `src/agentforge/models/artifacts.py` | `AgentCard` + `ToolManifest` — output artifact models |
+| `src/agentforge/models/composed.py` | `ComposedToolSet` + `RoutingEntry` — composition output fed to generators |
 | `src/agentforge/utils/console.py` | Rich console singleton, table builders, score formatting |
 | `src/agentforge/utils/errors.py` | Exception hierarchy: 8 typed errors under `AgentForgeError` |
-| `src/agentforge/cli/main.py` | Root Typer app (sub-commands added per phase) |
-| `src/agentforge/sources/` | Source adapters — Phase 2 (not yet implemented) |
-| `src/agentforge/curation/` | Quality scanner, rule curator, enrichment — Phase 4 |
-| `src/agentforge/composition/` | Namespace merge, conflict resolution — Phase 4 |
-| `src/agentforge/generators/` | Jinja2-based artifact generators — Phase 5 |
+| `src/agentforge/cli/main.py` | Root Typer app; registers init/add/inspect/generate/preview |
+| `src/agentforge/sources/mcp_stdio.py` | `MCPStdioAdapter` — spawns subprocess, calls `tools/list`, terminates |
+| `src/agentforge/sources/mcp_http.py` | `MCPHttpAdapter` — streamable-HTTP transport |
+| `src/agentforge/sources/registry.py` | `register_adapter` / `get_adapter` / `load_plugin_adapters` |
+| `src/agentforge/curation/quality.py` | `QualityScanner` — 7-flag rubric, 0.0–1.0 score |
+| `src/agentforge/curation/rules.py` | `RuleBasedCurator` — filter, rename, description override |
+| `src/agentforge/curation/engine.py` | `CurationEngine` — orchestrates scanner → rule curator |
+| `src/agentforge/composition/composer.py` | `Composer` — namespace merge, conflict resolution, routing map |
+| `src/agentforge/generators/runner.py` | `run_generators()` — orchestrates all 4 artifact generators |
+| `src/agentforge/generators/agent_card.py` | A2A-valid `agent_card.json` |
+| `src/agentforge/generators/tool_manifest.py` | `mcp.json` tool manifest |
+| `src/agentforge/generators/system_prompt.py` | `system_prompt.md` via Jinja2 |
+| `src/agentforge/generators/readme.py` | `README.md` via Jinja2 |
+| `src/agentforge/config/loader.py` | Parse + validate `agentforge.yaml` → `AgentForgeConfig` |
+| `src/agentforge/config/writer.py` | `ruamel.yaml` round-trip with comment preservation |
+| `src/agentforge/plugins/loader.py` | Entry-point discovery (`agentforge.adapters` group) |
 
 ### Configuration
 
@@ -76,6 +88,18 @@ GENERATORS → agent_card.json, mcp.json, system_prompt.md, README.md
 
 `tests/conftest.py` provides shared fixtures: `sample_tool`, `weak_tool`, `github_tools`, `sample_config`. Use these rather than constructing models inline in tests.
 
+### CLI → Pipeline Mapping
+
+```
+init     → adapter.introspect() → ConfigWriter.write_new()
+add      → load yaml → adapter.introspect() → ConfigWriter.add_source()
+inspect  → load yaml → [introspect all] → QualityScanner → Rich table
+generate → load yaml → [introspect all] → CurationEngine → quality gate → Composer → run_generators()
+preview  → same as generate, output to tempdir, print diff
+```
+
+Multi-source introspection runs concurrently via `anyio.create_task_group()`.
+
 ## Implementation Status
 
-The project follows a 7-phase plan. Phase 1 (models, utils, CLI scaffold) is complete. See [PLAN.md](PLAN.md) for the full phased roadmap and [agentforge-spec-v3.md](agentforge-spec-v3.md) for the full design specification.
+All 7 phases are complete (172 tests, ~88% coverage). See [agentforge-spec-v3.md](agentforge-spec-v3.md) for the full design specification.

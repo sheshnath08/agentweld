@@ -111,15 +111,53 @@ def _derive_source_id(source: str) -> str:
 
     Examples:
         "npx @modelcontextprotocol/server-github" -> "github"
+        "docker run -i --rm -e TOKEN ghcr.io/github/github-mcp-server" -> "github"
         "https://api.example.com/mcp" -> "example"
     """
     parts = source.replace("https://", "").replace("http://", "").split()
-    token = parts[-1] if parts else source
+    # For docker commands, find the image argument (last non-flag token after "run")
+    if parts and parts[0] == "docker":
+        image = _extract_docker_image(parts)
+        token = image.split("/")[-1] if image else parts[-1]
+    else:
+        token = parts[-1] if parts else source
     slug = re.sub(r"[^a-z0-9]", "-", token.lower())
     slug = re.sub(r"-+", "-", slug).strip("-")
-    # Take the last meaningful segment (length > 2)
     segments = [s for s in slug.split("-") if len(s) > 2]
+    # For docker images and similar "name-type-suffix" patterns, prefer the first
+    # meaningful segment (e.g. "github-mcp-server" -> "github").
+    # For npx packages like "server-github", prefer the last (-> "github").
+    if parts and parts[0] == "docker":
+        return segments[0] if segments else slug[:20]
     return segments[-1] if segments else slug[:20]
+
+
+def _extract_docker_image(parts: list[str]) -> str:
+    """Return the image name from a 'docker run ...' token list.
+
+    Skips flags (starting with '-') and their values for known value-taking flags.
+    """
+    _VALUE_FLAGS = {"-e", "--env", "-p", "--publish", "--name", "-v", "--volume",
+                   "--network", "-u", "--user", "--entrypoint", "-w", "--workdir"}
+    skip_next = False
+    past_run = False
+    for token in parts:
+        if token == "run":
+            past_run = True
+            continue
+        if not past_run:
+            continue
+        if skip_next:
+            skip_next = False
+            continue
+        if token in _VALUE_FLAGS:
+            skip_next = True
+            continue
+        if token.startswith("-"):
+            continue
+        # First non-flag token after 'run' is the image
+        return token
+    return ""
 
 
 def _derive_agent_name(source: str) -> str:
