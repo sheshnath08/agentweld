@@ -9,13 +9,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentforge.models.config import SourceConfig
-from agentforge.models.tool import ToolDefinition
-from agentforge.sources.base import SourceAdapter
-from agentforge.sources.mcp_http import MCPHttpAdapter
-from agentforge.sources.mcp_stdio import MCPStdioAdapter
-from agentforge.sources.registry import _reset_registry, get_adapter, list_adapters, register_adapter
-from agentforge.utils.errors import PluginError, SourceConnectionError
+from agentweld.models.config import SourceConfig
+from agentweld.models.tool import ToolDefinition
+from agentweld.sources.base import SourceAdapter
+from agentweld.sources.mcp_http import MCPHttpAdapter
+from agentweld.sources.mcp_stdio import MCPStdioAdapter
+from agentweld.sources.registry import _reset_registry, get_adapter, list_adapters, register_adapter
+from agentweld.utils.errors import PluginError, SourceConnectionError
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -123,8 +123,8 @@ class TestMCPStdioAdapter:
         mock_stdio_cm.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("agentforge.sources.mcp_stdio.stdio_client", return_value=mock_stdio_cm),
-            patch("agentforge.sources.mcp_stdio.ClientSession", return_value=mock_session),
+            patch("agentweld.sources.mcp_stdio.stdio_client", return_value=mock_stdio_cm),
+            patch("agentweld.sources.mcp_stdio.ClientSession", return_value=mock_session),
         ):
             adapter = MCPStdioAdapter()
             tools = await adapter.introspect(stdio_config)
@@ -144,7 +144,7 @@ class TestMCPStdioAdapter:
         mock_stdio_cm.__aenter__ = AsyncMock(side_effect=RuntimeError("process died"))
         mock_stdio_cm.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("agentforge.sources.mcp_stdio.stdio_client", return_value=mock_stdio_cm):
+        with patch("agentweld.sources.mcp_stdio.stdio_client", return_value=mock_stdio_cm):
             adapter = MCPStdioAdapter()
             with pytest.raises(SourceConnectionError, match="failed to introspect via stdio"):
                 await adapter.introspect(stdio_config)
@@ -220,8 +220,8 @@ class TestMCPHttpAdapter:
         mock_http_cm.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("agentforge.sources.mcp_http.streamablehttp_client", return_value=mock_http_cm),
-            patch("agentforge.sources.mcp_http.ClientSession", return_value=mock_session),
+            patch("agentweld.sources.mcp_http.streamablehttp_client", return_value=mock_http_cm),
+            patch("agentweld.sources.mcp_http.ClientSession", return_value=mock_session),
         ):
             adapter = MCPHttpAdapter()
             tools = await adapter.introspect(http_config)
@@ -235,7 +235,7 @@ class TestMCPHttpAdapter:
         mock_http_cm.__aenter__ = AsyncMock(side_effect=ConnectionRefusedError("refused"))
         mock_http_cm.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("agentforge.sources.mcp_http.streamablehttp_client", return_value=mock_http_cm):
+        with patch("agentweld.sources.mcp_http.streamablehttp_client", return_value=mock_http_cm):
             adapter = MCPHttpAdapter()
             with pytest.raises(SourceConnectionError, match="failed to introspect via HTTP"):
                 await adapter.introspect(http_config)
@@ -253,7 +253,7 @@ class TestMCPHttpAdapter:
         assert await adapter.health_check(http_config) is False
 
     def test_build_headers_with_bearer_auth(self, monkeypatch):
-        from agentforge.models.config import BearerAuth
+        from agentweld.models.config import BearerAuth
 
         monkeypatch.setenv("MY_TOKEN", "tok123")
         config = SourceConfig(
@@ -297,7 +297,7 @@ class TestRegistry:
         register_adapter("dummy", DummyAdapter())
         # registry now has only "dummy" (built-ins not loaded yet)
         # Force built-in load then verify both exist
-        from agentforge.sources.registry import _ensure_loaded
+        from agentweld.sources.registry import _ensure_loaded
         _ensure_loaded()
         adapters = list_adapters()
         assert "dummy" in adapters

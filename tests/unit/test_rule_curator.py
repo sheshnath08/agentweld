@@ -4,22 +4,22 @@ from __future__ import annotations
 
 import pytest
 
-from agentforge.curation.rules import RuleBasedCurator
-from agentforge.models.config import (
+from agentweld.curation.rules import RuleBasedCurator
+from agentweld.models.config import (
     AgentConfig,
-    AgentForgeConfig,
+    AgentweldConfig,
     SourceToolFilter,
     ToolsConfig,
 )
-from agentforge.models.tool import ToolDefinition
+from agentweld.models.tool import ToolDefinition
 
 
 def _make_config(
     filters: dict | None = None,
     rename: dict | None = None,
     descriptions: dict | None = None,
-) -> AgentForgeConfig:
-    return AgentForgeConfig(
+) -> AgentweldConfig:
+    return AgentweldConfig(
         agent=AgentConfig(name="Test Agent"),
         tools=ToolsConfig(
             filters=filters or {},

@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from agentforge.models.tool import QualityFlag, ToolDefinition
+from agentweld.models.tool import QualityFlag, ToolDefinition
 
 
 def test_from_mcp_sets_id_correctly():

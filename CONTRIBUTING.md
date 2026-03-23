@@ -1,12 +1,12 @@
-# Contributing to agentforge
+# Contributing to agentweld
 
 Thank you for your interest in contributing!
 
 ## Development Setup
 
 ```bash
-git clone https://github.com/sheshnath08/agentforge
-cd agentforge
+git clone https://github.com/sheshnath08/agentweld
+cd agentweld
 
 # Using uv (recommended)
 uv venv && source .venv/bin/activate
@@ -26,7 +26,7 @@ Run all of the following before submitting a PR:
 ```bash
 ruff check src/          # lint
 ruff format src/         # format
-mypy src/agentforge      # type checking
+mypy src/agentweld      # type checking
 pytest tests/unit/       # unit tests (no live MCP connections required)
 ```
 
@@ -46,16 +46,16 @@ See [CLAUDE.md](CLAUDE.md) for the full module layout and pipeline stages.
 **The most important invariant:** `ToolDefinition.description_original` is set once on construction and must never be modified. All curation writes exclusively to `description_curated`. Breaking this invariant corrupts the provenance chain and will be rejected.
 
 Other key decisions:
-- `SourceAdapter` is a `typing.Protocol` — third-party adapters do not need to import agentforge internals.
-- LLM enrichment is **explicit-only** — it never runs silently during `generate`. Only via an explicit `agentforge enrich` call.
+- `SourceAdapter` is a `typing.Protocol` — third-party adapters do not need to import agentweld internals.
+- LLM enrichment is **explicit-only** — it never runs silently during `generate`. Only via an explicit `agentweld enrich` call.
 - `--trust` is required for stdio sources — spawning arbitrary subprocesses is code execution; opt-in is non-negotiable.
 - `ruamel.yaml` is used over PyYAML to preserve YAML comments on round-trip.
 
 ## Writing a Source Adapter Plugin
 
-A source adapter is any class that satisfies the `SourceAdapter` Protocol. No inheritance from agentforge is required.
+A source adapter is any class that satisfies the `SourceAdapter` Protocol. No inheritance from agentweld is required.
 
-**Required interface** (from `src/agentforge/sources/base.py`):
+**Required interface** (from `src/agentweld/sources/base.py`):
 
 ```python
 class MyAdapter:
@@ -75,7 +75,7 @@ class MyAdapter:
 **Register via entry point** in your package's `pyproject.toml`:
 
 ```toml
-[project.entry-points."agentforge.adapters"]
+[project.entry-points."agentweld.adapters"]
 my-transport = "my_package.adapter:MyAdapter"
 ```
 

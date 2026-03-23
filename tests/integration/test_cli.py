@@ -11,14 +11,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentforge.cli.main import app
-from agentforge.models.config import (
+from agentweld.cli.main import app
+from agentweld.models.config import (
     AgentConfig,
-    AgentForgeConfig,
+    AgentweldConfig,
     SourceConfig,
     ToolsConfig,
 )
-from agentforge.models.tool import ToolDefinition
+from agentweld.models.tool import ToolDefinition
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -39,8 +39,8 @@ def _make_tools(source_id: str = "github", count: int = 3) -> list[ToolDefinitio
     ]
 
 
-def _make_config(source_id: str = "github") -> AgentForgeConfig:
-    return AgentForgeConfig(
+def _make_config(source_id: str = "github") -> AgentweldConfig:
+    return AgentweldConfig(
         agent=AgentConfig(name="Test Agent", description="A test agent."),
         sources=[
             SourceConfig(
@@ -59,7 +59,7 @@ def _make_config(source_id: str = "github") -> AgentForgeConfig:
 
 class TestHelp:
     def test_help_shows_all_commands(self):
-        """agentforge --help should list all registered sub-commands."""
+        """agentweld --help should list all registered sub-commands."""
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
         for cmd in ["init", "add", "inspect", "generate", "preview"]:
@@ -100,8 +100,8 @@ class TestInitCommand:
         assert "--trust" in result.output
 
     def test_init_with_trust_creates_yaml(self, tmp_path, github_tools):
-        """init --trust should create agentforge.yaml with discovered tools."""
-        with patch("agentforge.cli.init.anyio.run", return_value=github_tools):
+        """init --trust should create agentweld.yaml with discovered tools."""
+        with patch("agentweld.cli.init.anyio.run", return_value=github_tools):
             result = runner.invoke(
                 app,
                 [
@@ -113,7 +113,7 @@ class TestInitCommand:
                 ],
             )
         assert result.exit_code == 0, result.output
-        yaml_path = tmp_path / "agentforge.yaml"
+        yaml_path = tmp_path / "agentweld.yaml"
         assert yaml_path.exists()
         content = yaml_path.read_text()
         assert "github" in content
@@ -121,7 +121,7 @@ class TestInitCommand:
     def test_init_http_no_trust_required(self, tmp_path):
         """HTTP sources don't require --trust."""
         tools = _make_tools("myserver")
-        with patch("agentforge.cli.init.anyio.run", return_value=tools):
+        with patch("agentweld.cli.init.anyio.run", return_value=tools):
             result = runner.invoke(
                 app,
                 [
@@ -132,14 +132,14 @@ class TestInitCommand:
                 ],
             )
         assert result.exit_code == 0, result.output
-        assert (tmp_path / "agentforge.yaml").exists()
+        assert (tmp_path / "agentweld.yaml").exists()
 
     def test_init_connection_failure_exits_nonzero(self, tmp_path):
         """Connection failure should exit with code 1."""
-        from agentforge.utils.errors import SourceConnectionError
+        from agentweld.utils.errors import SourceConnectionError
 
         with patch(
-            "agentforge.cli.init.anyio.run",
+            "agentweld.cli.init.anyio.run",
             side_effect=SourceConnectionError("connection refused"),
         ):
             result = runner.invoke(
@@ -156,8 +156,8 @@ class TestInitCommand:
         assert "Connection failed" in result.output or "connection refused" in result.output
 
     def test_init_with_custom_name(self, tmp_path, github_tools):
-        """--name should set the agent name in agentforge.yaml."""
-        with patch("agentforge.cli.init.anyio.run", return_value=github_tools):
+        """--name should set the agent name in agentweld.yaml."""
+        with patch("agentweld.cli.init.anyio.run", return_value=github_tools):
             result = runner.invoke(
                 app,
                 [
@@ -171,12 +171,12 @@ class TestInitCommand:
                 ],
             )
         assert result.exit_code == 0, result.output
-        content = (tmp_path / "agentforge.yaml").read_text()
+        content = (tmp_path / "agentweld.yaml").read_text()
         assert "My Custom Agent" in content
 
     def test_init_shows_tools_table(self, tmp_path, github_tools):
         """init should display a table of discovered tools."""
-        with patch("agentforge.cli.init.anyio.run", return_value=github_tools):
+        with patch("agentweld.cli.init.anyio.run", return_value=github_tools):
             result = runner.invoke(
                 app,
                 [
@@ -194,13 +194,13 @@ class TestInitCommand:
 
     def test_derive_source_id_from_npx_command(self):
         """_derive_source_id should extract a short slug from an npx command."""
-        from agentforge.cli.init import _derive_source_id
+        from agentweld.cli.init import _derive_source_id
 
         assert _derive_source_id("npx @modelcontextprotocol/server-github") == "github"
         assert _derive_source_id("npx @mcp/server-slack") == "slack"
 
     def test_derive_source_id_from_url(self):
-        from agentforge.cli.init import _derive_source_id
+        from agentweld.cli.init import _derive_source_id
 
         result = _derive_source_id("https://api.example.com/mcp")
         assert isinstance(result, str)
@@ -221,15 +221,15 @@ class TestAddCommand:
         """add --trust should call add_source with the new source config."""
         # First create a config
         cfg = _make_config("github")
-        yaml_path = tmp_path / "agentforge.yaml"
+        yaml_path = tmp_path / "agentweld.yaml"
 
         slack_tools = _make_tools("slack")
 
         with (
-            patch("agentforge.cli.add.load_config", return_value=cfg),
-            patch("agentforge.cli.add._resolve_yaml_path", return_value=yaml_path),
-            patch("agentforge.cli.add.anyio.run", return_value=slack_tools),
-            patch("agentforge.cli.add.add_source") as mock_add_source,
+            patch("agentweld.cli.add.load_config", return_value=cfg),
+            patch("agentweld.cli.add._resolve_yaml_path", return_value=yaml_path),
+            patch("agentweld.cli.add.anyio.run", return_value=slack_tools),
+            patch("agentweld.cli.add.add_source") as mock_add_source,
         ):
             result = runner.invoke(
                 app,
@@ -251,13 +251,13 @@ class TestAddCommand:
     def test_add_duplicate_source_exits_error(self, tmp_path):
         """add with a source id that already exists should exit non-zero."""
         cfg = _make_config("github")
-        yaml_path = tmp_path / "agentforge.yaml"
+        yaml_path = tmp_path / "agentweld.yaml"
         tools = _make_tools("github")
 
         with (
-            patch("agentforge.cli.add.load_config", return_value=cfg),
-            patch("agentforge.cli.add._resolve_yaml_path", return_value=yaml_path),
-            patch("agentforge.cli.add.anyio.run", return_value=tools),
+            patch("agentweld.cli.add.load_config", return_value=cfg),
+            patch("agentweld.cli.add._resolve_yaml_path", return_value=yaml_path),
+            patch("agentweld.cli.add.anyio.run", return_value=tools),
         ):
             result = runner.invoke(
                 app,
@@ -275,10 +275,10 @@ class TestAddCommand:
 
     def test_add_config_not_found_exits_error(self, tmp_path):
         """add with missing config file should show helpful error."""
-        from agentforge.utils.errors import ConfigNotFoundError
+        from agentweld.utils.errors import ConfigNotFoundError
 
         with patch(
-            "agentforge.cli.add.load_config",
+            "agentweld.cli.add.load_config",
             side_effect=ConfigNotFoundError("not found"),
         ):
             result = runner.invoke(
@@ -296,14 +296,14 @@ class TestAddCommand:
     def test_add_http_no_trust_required(self, tmp_path):
         """HTTP sources don't require --trust for add."""
         cfg = _make_config("github")
-        yaml_path = tmp_path / "agentforge.yaml"
+        yaml_path = tmp_path / "agentweld.yaml"
         tools = _make_tools("remote")
 
         with (
-            patch("agentforge.cli.add.load_config", return_value=cfg),
-            patch("agentforge.cli.add._resolve_yaml_path", return_value=yaml_path),
-            patch("agentforge.cli.add.anyio.run", return_value=tools),
-            patch("agentforge.cli.add.add_source"),
+            patch("agentweld.cli.add.load_config", return_value=cfg),
+            patch("agentweld.cli.add._resolve_yaml_path", return_value=yaml_path),
+            patch("agentweld.cli.add.anyio.run", return_value=tools),
+            patch("agentweld.cli.add.add_source"),
         ):
             result = runner.invoke(
                 app,
@@ -324,10 +324,10 @@ class TestAddCommand:
 class TestInspectCommand:
     def test_inspect_config_not_found(self, tmp_path):
         """inspect with missing config should exit with error."""
-        from agentforge.utils.errors import ConfigNotFoundError
+        from agentweld.utils.errors import ConfigNotFoundError
 
         with patch(
-            "agentforge.cli.inspect.load_config",
+            "agentweld.cli.inspect.load_config",
             side_effect=ConfigNotFoundError("not found"),
         ):
             result = runner.invoke(app, ["inspect"])
@@ -340,8 +340,8 @@ class TestInspectCommand:
         cfg = _make_config("github")
 
         with (
-            patch("agentforge.cli.inspect.load_config", return_value=cfg),
-            patch("agentforge.cli.inspect.anyio.run") as mock_run,
+            patch("agentweld.cli.inspect.load_config", return_value=cfg),
+            patch("agentweld.cli.inspect.anyio.run") as mock_run,
         ):
             # anyio.run calls the coroutine; simulate side effect
             def _run_side_effect(coro):
@@ -366,8 +366,8 @@ class TestInspectCommand:
         mock_adapter.introspect = AsyncMock(return_value=github_tools)
 
         with (
-            patch("agentforge.cli.inspect.load_config", return_value=cfg),
-            patch("agentforge.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.load_config", return_value=cfg),
+            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect", "--source"])
 
@@ -382,8 +382,8 @@ class TestInspectCommand:
         mock_adapter.introspect = AsyncMock(return_value=github_tools)
 
         with (
-            patch("agentforge.cli.inspect.load_config", return_value=cfg),
-            patch("agentforge.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.load_config", return_value=cfg),
+            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect"])
 
@@ -392,11 +392,11 @@ class TestInspectCommand:
 
     def test_inspect_no_sources(self, tmp_path):
         """inspect with no sources configured should exit cleanly."""
-        cfg = AgentForgeConfig(
+        cfg = AgentweldConfig(
             agent=AgentConfig(name="Empty Agent"),
             sources=[],
         )
-        with patch("agentforge.cli.inspect.load_config", return_value=cfg):
+        with patch("agentweld.cli.inspect.load_config", return_value=cfg):
             result = runner.invoke(app, ["inspect"])
 
         assert result.exit_code == 0
@@ -409,8 +409,8 @@ class TestInspectCommand:
         mock_adapter.introspect = AsyncMock(return_value=github_tools)
 
         with (
-            patch("agentforge.cli.inspect.load_config", return_value=cfg),
-            patch("agentforge.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.load_config", return_value=cfg),
+            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect", "--conflicts"])
 
@@ -437,7 +437,7 @@ class TestInspectCommand:
             )
         ]
 
-        cfg = AgentForgeConfig(
+        cfg = AgentweldConfig(
             agent=AgentConfig(name="Multi-source Agent"),
             sources=[
                 SourceConfig(id="src1", type="mcp_server", transport="stdio", command="cmd1"),
@@ -457,8 +457,8 @@ class TestInspectCommand:
         mock_adapter.introspect = _mock_introspect
 
         with (
-            patch("agentforge.cli.inspect.load_config", return_value=cfg),
-            patch("agentforge.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.load_config", return_value=cfg),
+            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect", "--conflicts"])
 
@@ -472,11 +472,11 @@ class TestInspectCommand:
 
 class TestGenerateCommand:
     def test_generate_config_not_found_exits_error(self):
-        """generate without agentforge.yaml should show a helpful error."""
-        from agentforge.utils.errors import ConfigNotFoundError
+        """generate without agentweld.yaml should show a helpful error."""
+        from agentweld.utils.errors import ConfigNotFoundError
 
         with patch(
-            "agentforge.cli.generate.load_config",
+            "agentweld.cli.generate.load_config",
             side_effect=ConfigNotFoundError("not found"),
         ):
             result = runner.invoke(app, ["generate"])
@@ -488,11 +488,11 @@ class TestGenerateCommand:
 
     def test_generate_no_sources(self):
         """generate with no sources configured should exit cleanly."""
-        cfg = AgentForgeConfig(
+        cfg = AgentweldConfig(
             agent=AgentConfig(name="Empty Agent"),
             sources=[],
         )
-        with patch("agentforge.cli.generate.load_config", return_value=cfg):
+        with patch("agentweld.cli.generate.load_config", return_value=cfg):
             result = runner.invoke(app, ["generate"])
 
         assert result.exit_code == 0
@@ -502,13 +502,13 @@ class TestGenerateCommand:
         """generate with a source that fails should exit non-zero without --force."""
         cfg = _make_config("github")
         mock_adapter = MagicMock()
-        from agentforge.utils.errors import SourceConnectionError
+        from agentweld.utils.errors import SourceConnectionError
 
         mock_adapter.introspect = AsyncMock(side_effect=SourceConnectionError("refused"))
 
         with (
-            patch("agentforge.cli.generate.load_config", return_value=cfg),
-            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["generate"])
 
@@ -518,13 +518,13 @@ class TestGenerateCommand:
         """generate --force should continue even if sources fail."""
         cfg = _make_config("github")
         mock_adapter = MagicMock()
-        from agentforge.utils.errors import SourceConnectionError
+        from agentweld.utils.errors import SourceConnectionError
 
         mock_adapter.introspect = AsyncMock(side_effect=SourceConnectionError("refused"))
 
         with (
-            patch("agentforge.cli.generate.load_config", return_value=cfg),
-            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["generate", "--force"])
 
@@ -542,8 +542,8 @@ class TestGenerateCommand:
         mock_adapter.introspect = AsyncMock(return_value=github_tools)
 
         with (
-            patch("agentforge.cli.generate.load_config", return_value=cfg),
-            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["generate", "--force"])
 
@@ -552,7 +552,7 @@ class TestGenerateCommand:
 
     def test_generate_quality_gate_blocks_without_force(self, tmp_path):
         """generate should fail if tools have quality scores below block_below."""
-        from agentforge.models.config import QualityConfig
+        from agentweld.models.config import QualityConfig
 
         cfg = _make_config("github")
         cfg.quality = QualityConfig(warn_below=0.6, block_below=0.4)
@@ -576,9 +576,9 @@ class TestGenerateCommand:
         mock_engine.run.return_value = low_quality_tools
 
         with (
-            patch("agentforge.cli.generate.load_config", return_value=cfg),
-            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
-            patch("agentforge.cli.generate.CurationEngine", return_value=mock_engine),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.CurationEngine", return_value=mock_engine),
         ):
             result = runner.invoke(app, ["generate"])
 
@@ -592,11 +592,11 @@ class TestGenerateCommand:
 
 class TestPreviewCommand:
     def test_preview_config_not_found(self):
-        """preview without agentforge.yaml should show a helpful error."""
-        from agentforge.utils.errors import ConfigNotFoundError
+        """preview without agentweld.yaml should show a helpful error."""
+        from agentweld.utils.errors import ConfigNotFoundError
 
         with patch(
-            "agentforge.cli.preview.load_config",
+            "agentweld.cli.preview.load_config",
             side_effect=ConfigNotFoundError("not found"),
         ):
             result = runner.invoke(app, ["preview"])
@@ -606,11 +606,11 @@ class TestPreviewCommand:
 
     def test_preview_no_sources(self):
         """preview with no sources configured should exit cleanly."""
-        cfg = AgentForgeConfig(
+        cfg = AgentweldConfig(
             agent=AgentConfig(name="Empty Agent"),
             sources=[],
         )
-        with patch("agentforge.cli.preview.load_config", return_value=cfg):
+        with patch("agentweld.cli.preview.load_config", return_value=cfg):
             result = runner.invoke(app, ["preview"])
 
         assert result.exit_code == 0
@@ -628,9 +628,9 @@ class TestPreviewCommand:
             return [out]
 
         with (
-            patch("agentforge.cli.preview.load_config", return_value=cfg),
-            patch("agentforge.cli.preview.get_adapter", return_value=mock_adapter),
-            patch("agentforge.cli.preview.run_generators", _mock_run_generators),
+            patch("agentweld.cli.preview.load_config", return_value=cfg),
+            patch("agentweld.cli.preview.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.preview.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(app, ["preview"])
 
@@ -654,9 +654,9 @@ class TestPreviewCommand:
         mock_adapter.introspect = AsyncMock(return_value=github_tools)
 
         with (
-            patch("agentforge.cli.preview.load_config", return_value=cfg),
-            patch("agentforge.cli.preview.get_adapter", return_value=mock_adapter),
-            patch("agentforge.cli.preview.run_generators", _mock_run_generators),
+            patch("agentweld.cli.preview.load_config", return_value=cfg),
+            patch("agentweld.cli.preview.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.preview.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(app, ["preview"])
 
@@ -664,7 +664,7 @@ class TestPreviewCommand:
         # Should use a temp dir, not the permanent output dir
         if captured_output_dirs:
             assert permanent_output not in captured_output_dirs[0]
-            assert "agentforge_preview_" in captured_output_dirs[0] or "tmp" in captured_output_dirs[0].lower()
+            assert "agentweld_preview_" in captured_output_dirs[0] or "tmp" in captured_output_dirs[0].lower()
 
 
 # ── generate pipeline end-to-end ──────────────────────────────────────────────
@@ -673,7 +673,7 @@ class TestPreviewCommand:
 class TestGeneratePipeline:
     def test_generate_writes_artifacts(self, tmp_path, github_tools):
         """generate should run the full pipeline and report written artifact paths."""
-        from agentforge.models.composed import ComposedToolSet
+        from agentweld.models.composed import ComposedToolSet
 
         cfg = _make_config("github")
         cfg.generate.output_dir = str(tmp_path / "agent")
@@ -691,9 +691,9 @@ class TestGeneratePipeline:
             return [out]
 
         with (
-            patch("agentforge.cli.generate.load_config", return_value=cfg),
-            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
-            patch("agentforge.cli.generate.run_generators", _mock_run_generators),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(app, ["generate", "--force"])
 
@@ -716,9 +716,9 @@ class TestGeneratePipeline:
             return []
 
         with (
-            patch("agentforge.cli.generate.load_config", return_value=cfg),
-            patch("agentforge.cli.generate.get_adapter", return_value=mock_adapter),
-            patch("agentforge.cli.generate.run_generators", _mock_run_generators),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(
                 app, ["generate", "--force", "--only", "agent_card", "--only", "readme"]

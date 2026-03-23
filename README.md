@@ -1,17 +1,17 @@
-# agentforge
+# agentweld
 
 > Turn any MCP server into a curated, composable, A2A-ready agent.
 
-[![PyPI version](https://img.shields.io/pypi/v/agentforge)](https://pypi.org/project/agentforge/)
-[![Python 3.11+](https://img.shields.io/pypi/pyversions/agentforge)](https://pypi.org/project/agentforge/)
+[![PyPI version](https://img.shields.io/pypi/v/agentweld)](https://pypi.org/project/agentweld/)
+[![Python 3.11+](https://img.shields.io/pypi/pyversions/agentweld)](https://pypi.org/project/agentweld/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![CI](https://github.com/sheshnath08/agentforge/actions/workflows/ci.yml/badge.svg)](https://github.com/sheshnath08/agentforge/actions/workflows/ci.yml)
+[![CI](https://github.com/sheshnath08/agentweld/actions/workflows/ci.yml/badge.svg)](https://github.com/sheshnath08/agentweld/actions/workflows/ci.yml)
 
-## What is agentforge?
+## What is agentweld?
 
 The MCP ecosystem has servers — lots of them. What it's missing is a way to turn those servers into purposeful, well-described, discoverable agents. Raw MCP servers expose dozens or hundreds of tools with weak descriptions, inconsistent naming, and no quality signal. Clients have no way to know which tools are useful, what they do, or how to combine them.
 
-**agentforge** solves both problems. It connects to one or more MCP servers, runs a quality scan across every exposed tool, lets you curate the results (filter, rename, enrich descriptions), then generates a complete set of deployment artifacts: an A2A-valid agent card, a tool manifest, a system prompt, and a README — all from a single `agentforge.yaml`.
+**agentweld** solves both problems. It connects to one or more MCP servers, runs a quality scan across every exposed tool, lets you curate the results (filter, rename, enrich descriptions), then generates a complete set of deployment artifacts: an A2A-valid agent card, a tool manifest, a system prompt, and a README — all from a single `agentweld.yaml`.
 
 ## The Pipeline
 
@@ -30,7 +30,7 @@ GENERATORS  →  agent_card.json  /  mcp.json  /  system_prompt.md  /  README.md
 ### Install
 
 ```bash
-pip install agentforge
+pip install agentweld
 ```
 
 ### 5-command walkthrough
@@ -38,17 +38,17 @@ pip install agentforge
 ```bash
 # 1. Scaffold a project from an MCP server
 #    --trust is required for stdio sources (spawning npx is code execution)
-$ agentforge init "npx @modelcontextprotocol/server-github" --trust
+$ agentweld init "npx @modelcontextprotocol/server-github" --trust
 WARNING: --trust flag set. Spawning subprocess: npx @modelcontextprotocol/server-github
 Connecting to npx @modelcontextprotocol/server-github...
 Discovered 26 tools.
-Created ./agentforge.yaml
+Created ./agentweld.yaml
 
 # 2. (Optional) Add a second source
-$ agentforge add "npx @linear/mcp" --trust
+$ agentweld add "npx @linear/mcp" --trust
 
 # 3. Check tool quality before generating
-$ agentforge inspect
+$ agentweld inspect
 ┌──────────┬───────┬─────────────┐
 │ Source   │ Tools │ Avg Quality │
 ├──────────┼───────┼─────────────┤
@@ -56,11 +56,11 @@ $ agentforge inspect
 │ linear   │  24   │   0.71      │
 └──────────┴───────┴─────────────┘
 
-# 4. Edit agentforge.yaml to filter, rename, or override descriptions
+# 4. Edit agentweld.yaml to filter, rename, or override descriptions
 #    (see Configuration Reference below)
 
 # 5. Generate artifacts
-$ agentforge generate
+$ agentweld generate
 Generated 4 artifact(s) in ./agent:
   • agent_card.json
   • mcp.json
@@ -70,12 +70,12 @@ Generated 4 artifact(s) in ./agent:
 
 ## CLI Reference
 
-### `agentforge init`
+### `agentweld init`
 
-Scaffold a new `agentforge.yaml` from an MCP source.
+Scaffold a new `agentweld.yaml` from an MCP source.
 
 ```
-agentforge init SOURCE [OPTIONS]
+agentweld init SOURCE [OPTIONS]
 
 Arguments:
   SOURCE    MCP server command (stdio) or URL (http/https)
@@ -89,12 +89,12 @@ Options:
 
 > **Security:** `--trust` is required for any stdio source because spawning `npx`, `docker`, or any arbitrary command is code execution. HTTP/HTTPS sources do not require it.
 
-### `agentforge add`
+### `agentweld add`
 
 Add another MCP source to an existing project.
 
 ```
-agentforge add SOURCE [OPTIONS]
+agentweld add SOURCE [OPTIONS]
 
 Arguments:
   SOURCE    MCP server command (stdio) or URL (http/https)
@@ -102,52 +102,52 @@ Arguments:
 Options:
   --from TEXT         Source type [default: mcp]
   --trust             Trust and execute the stdio command
-  -c, --config PATH   Path to agentforge.yaml [default: ./agentforge.yaml]
+  -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
 ```
 
-### `agentforge inspect`
+### `agentweld inspect`
 
 Inspect tools and quality metrics for all configured sources.
 
 ```
-agentforge inspect [OPTIONS]
+agentweld inspect [OPTIONS]
 
 Options:
   --source            Show raw tools per source (pre-curation)
   --final             Show post-curation tools
   --conflicts         Show naming conflicts across sources
-  -c, --config PATH   Path to agentforge.yaml [default: ./agentforge.yaml]
+  -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
 ```
 
-### `agentforge generate`
+### `agentweld generate`
 
 Run the full pipeline and write artifacts to the output directory.
 
 ```
-agentforge generate [OPTIONS]
+agentweld generate [OPTIONS]
 
 Options:
   --force             Overwrite existing artifacts and bypass the quality gate
   --only TEXT         Only generate specific artifacts (repeatable):
                       agent_card | tool_manifest | system_prompt | readme
-  -o, --output-dir PATH   Override the output directory from agentforge.yaml
-  -c, --config PATH   Path to agentforge.yaml [default: ./agentforge.yaml]
+  -o, --output-dir PATH   Override the output directory from agentweld.yaml
+  -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
 ```
 
-### `agentforge preview`
+### `agentweld preview`
 
 Same as `generate` but writes to a temp directory and prints artifact contents. Nothing is written to your project.
 
 ```
-agentforge preview [OPTIONS]
+agentweld preview [OPTIONS]
 
 Options:
-  -c, --config PATH   Path to agentforge.yaml [default: ./agentforge.yaml]
+  -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
 ```
 
 ## Configuration Reference
 
-`agentforge.yaml` is the single source of truth for the entire pipeline. Here is an annotated example:
+`agentweld.yaml` is the single source of truth for the entire pipeline. Here is an annotated example:
 
 ```yaml
 meta:
@@ -188,7 +188,7 @@ tools:
     "linear::create_issue": linear_create_issue
 
   descriptions:
-    # Written here by `agentforge enrich` — safe to edit manually too
+    # Written here by `agentweld enrich` — safe to edit manually too
     search_repos: "Search GitHub repositories by keyword, language, or topic."
 
 quality:
@@ -228,7 +228,7 @@ generate:
 
 ## Plugin System
 
-agentforge discovers third-party source adapters via the `agentforge.adapters` entry-point group. No inheritance from agentforge internals is required — structural subtyping (Protocol) is used.
+agentweld discovers third-party source adapters via the `agentweld.adapters` entry-point group. No inheritance from agentweld internals is required — structural subtyping (Protocol) is used.
 
 **Implement the `SourceAdapter` protocol:**
 
@@ -238,8 +238,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentforge.models.config import SourceConfig
-    from agentforge.models.tool import ToolDefinition
+    from agentweld.models.config import SourceConfig
+    from agentweld.models.tool import ToolDefinition
 
 
 class MyAdapter:
@@ -255,11 +255,11 @@ class MyAdapter:
 **Register it in your package's `pyproject.toml`:**
 
 ```toml
-[project.entry-points."agentforge.adapters"]
+[project.entry-points."agentweld.adapters"]
 my-transport = "my_package.adapter:MyAdapter"
 ```
 
-After `pip install my-package`, agentforge discovers your adapter automatically. Use the transport key (`my-transport`) as the `--from` argument when running `init` or `add`.
+After `pip install my-package`, agentweld discovers your adapter automatically. Use the transport key (`my-transport`) as the `--from` argument when running `init` or `add`.
 
 ## Contributing
 
