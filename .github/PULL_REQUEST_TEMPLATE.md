@@ -14,7 +14,7 @@
 
 - [ ] `pytest tests/unit/` passes
 - [ ] `ruff check src/` passes
-- [ ] `mypy src/agentforge` passes
+- [ ] `mypy src/agentweld` passes
 - [ ] New tests added for new behaviour
 
 ## Notes for Reviewers

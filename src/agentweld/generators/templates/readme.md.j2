@@ -1,0 +1,18 @@
+# {{ agent_name }}
+
+{{ agent_description }}
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+{% for tool in tools %}
+| `{{ tool.name }}` | {{ tool.description }} |
+{% endfor %}
+
+## Getting Started
+
+```bash
+pip install agentweld
+agentweld generate
+```

@@ -7,20 +7,20 @@ from pathlib import Path
 
 import pytest
 
-from agentforge.models.composed import ComposedToolSet, RoutingEntry
-from agentforge.models.config import (
+from agentweld.models.composed import ComposedToolSet, RoutingEntry
+from agentweld.models.config import (
     A2AConfig,
     A2AAuthConfig,
     AgentConfig,
-    AgentForgeConfig,
+    AgentweldConfig,
     SkillConfig,
     SourceConfig,
 )
-from agentforge.models.tool import ToolDefinition
-from agentforge.generators.agent_card import AgentCardGenerator
-from agentforge.generators.tool_manifest import ToolManifestGenerator
-from agentforge.generators.system_prompt import SystemPromptGenerator
-from agentforge.generators.readme import ReadmeGenerator
+from agentweld.models.tool import ToolDefinition
+from agentweld.generators.agent_card import AgentCardGenerator
+from agentweld.generators.tool_manifest import ToolManifestGenerator
+from agentweld.generators.system_prompt import SystemPromptGenerator
+from agentweld.generators.readme import ReadmeGenerator
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ def _make_tool_set(tools: list[ToolDefinition]) -> ComposedToolSet:
     return ComposedToolSet(tools=tools, routing_map=routing)
 
 
-def _config_with_a2a(base: AgentForgeConfig) -> AgentForgeConfig:
+def _config_with_a2a(base: AgentweldConfig) -> AgentweldConfig:
     """Return a copy of *base* with an A2A config attached."""
     return base.model_copy(
         update={
@@ -130,7 +130,7 @@ class TestToolManifestGenerator:
         assert entry.env == {"GITHUB_TOKEN": "${GITHUB_TOKEN}"}
 
     def test_tool_manifest_http_source(self):
-        config = AgentForgeConfig(
+        config = AgentweldConfig(
             agent=AgentConfig(name="Test Agent"),
             sources=[
                 SourceConfig(
@@ -164,7 +164,7 @@ class TestToolManifestGenerator:
         assert "github" in data["servers"]
 
     def test_tool_manifest_multiple_sources(self):
-        config = AgentForgeConfig(
+        config = AgentweldConfig(
             agent=AgentConfig(name="Multi Agent"),
             sources=[
                 SourceConfig(

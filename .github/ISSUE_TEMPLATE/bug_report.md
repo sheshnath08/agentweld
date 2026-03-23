@@ -10,7 +10,7 @@ labels: bug
 
 ## Steps to Reproduce
 
-1. agentforge version: <!-- run `pip show agentforge` or `agentforge --version` -->
+1. agentweld version: <!-- run `pip show agentweld` or `agentweld --version` -->
 2. Python version:
 3. OS:
 4. Command run:
@@ -25,7 +25,7 @@ labels: bug
 <!-- paste traceback or error message here -->
 ```
 
-## agentforge.yaml (redact secrets)
+## agentweld.yaml (redact secrets)
 
 ```yaml
 <!-- paste relevant config sections if applicable -->

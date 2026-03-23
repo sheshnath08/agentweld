@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import pytest
 
-from agentforge.composition.composer import ComposedToolSet, Composer, RoutingEntry
-from agentforge.models.config import (
+from agentweld.composition.composer import ComposedToolSet, Composer, RoutingEntry
+from agentweld.models.config import (
     A2AConfig,
     AgentConfig,
-    AgentForgeConfig,
+    AgentweldConfig,
     CompositionConfig,
     SkillConfig,
     ToolsConfig,
 )
-from agentforge.models.tool import ToolDefinition
-from agentforge.utils.errors import CompositionError
+from agentweld.models.tool import ToolDefinition
+from agentweld.utils.errors import CompositionError
 
 
 def _make_config(
@@ -22,8 +22,8 @@ def _make_config(
     separator: str = "__",
     rename: dict | None = None,
     a2a: A2AConfig | None = None,
-) -> AgentForgeConfig:
-    return AgentForgeConfig(
+) -> AgentweldConfig:
+    return AgentweldConfig(
         agent=AgentConfig(name="Test Agent"),
         composition=CompositionConfig(
             conflict_strategy=strategy,  # type: ignore[arg-type]

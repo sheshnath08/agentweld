@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agentforge.curation.quality import QualityScanner
-from agentforge.models.tool import QualityFlag, ToolDefinition
+from agentweld.curation.quality import QualityScanner
+from agentweld.models.tool import QualityFlag, ToolDefinition
 
 
 @pytest.fixture

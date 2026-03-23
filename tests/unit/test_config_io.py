@@ -7,15 +7,15 @@ from pathlib import Path
 
 import pytest
 
-from agentforge.config.loader import load_config
-from agentforge.config.writer import add_source, update_descriptions, write_new
-from agentforge.models.config import (
+from agentweld.config.loader import load_config
+from agentweld.config.writer import add_source, update_descriptions, write_new
+from agentweld.models.config import (
     AgentConfig,
-    AgentForgeConfig,
+    AgentweldConfig,
     SourceConfig,
     ToolsConfig,
 )
-from agentforge.utils.errors import ConfigNotFoundError, ConfigValidationError
+from agentweld.utils.errors import ConfigNotFoundError, ConfigValidationError
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ MINIMAL_YAML = textwrap.dedent("""\
 
 FULL_YAML = textwrap.dedent("""\
     meta:
-      agentforge_version: "0.1"
+      agentweld_version: "0.1"
     agent:
       name: PR Review Agent
       description: Reviews PRs.
@@ -84,28 +84,28 @@ ANNOTATED_YAML = textwrap.dedent("""\
 
 class TestLoader:
     def test_load_minimal(self, tmp_path: Path) -> None:
-        (tmp_path / "agentforge.yaml").write_text(MINIMAL_YAML)
-        cfg = load_config(tmp_path / "agentforge.yaml")
+        (tmp_path / "agentweld.yaml").write_text(MINIMAL_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
         assert cfg.agent.name == "Test Agent"
         assert cfg.sources[0].id == "github"
 
     def test_load_full(self, tmp_path: Path) -> None:
-        (tmp_path / "agentforge.yaml").write_text(FULL_YAML)
-        cfg = load_config(tmp_path / "agentforge.yaml")
+        (tmp_path / "agentweld.yaml").write_text(FULL_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
         assert cfg.agent.version == "1.0.0"
         assert cfg.tools.rename == {"github::list_pull_requests": "find_open_prs"}
         assert cfg.quality.block_below == 0.4
 
     def test_env_interpolation(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("GITHUB_TOKEN", "ghp_secret")
-        (tmp_path / "agentforge.yaml").write_text(FULL_YAML)
-        cfg = load_config(tmp_path / "agentforge.yaml")
+        (tmp_path / "agentweld.yaml").write_text(FULL_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
         assert cfg.sources[0].env["GITHUB_TOKEN"] == "ghp_secret"
 
     def test_missing_env_var_left_as_token(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-        (tmp_path / "agentforge.yaml").write_text(FULL_YAML)
-        cfg = load_config(tmp_path / "agentforge.yaml")
+        (tmp_path / "agentweld.yaml").write_text(FULL_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
         # Unreplaced token is kept — caller decides whether that's valid
         assert cfg.sources[0].env["GITHUB_TOKEN"] == "${GITHUB_TOKEN}"
 
@@ -114,23 +114,23 @@ class TestLoader:
             load_config(tmp_path / "nonexistent.yaml")
 
     def test_empty_file(self, tmp_path: Path) -> None:
-        (tmp_path / "agentforge.yaml").write_text("")
+        (tmp_path / "agentweld.yaml").write_text("")
         with pytest.raises(ConfigValidationError, match="empty"):
-            load_config(tmp_path / "agentforge.yaml")
+            load_config(tmp_path / "agentweld.yaml")
 
     def test_missing_agent_key(self, tmp_path: Path) -> None:
-        (tmp_path / "agentforge.yaml").write_text("sources: []\n")
+        (tmp_path / "agentweld.yaml").write_text("sources: []\n")
         with pytest.raises(ConfigValidationError):
-            load_config(tmp_path / "agentforge.yaml")
+            load_config(tmp_path / "agentweld.yaml")
 
     def test_discover_from_cwd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        (tmp_path / "agentforge.yaml").write_text(MINIMAL_YAML)
+        (tmp_path / "agentweld.yaml").write_text(MINIMAL_YAML)
         monkeypatch.chdir(tmp_path)
         cfg = load_config()  # no explicit path — should discover via walk-up
         assert cfg.agent.name == "Test Agent"
 
     def test_discover_walks_up(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        (tmp_path / "agentforge.yaml").write_text(MINIMAL_YAML)
+        (tmp_path / "agentweld.yaml").write_text(MINIMAL_YAML)
         subdir = tmp_path / "a" / "b" / "c"
         subdir.mkdir(parents=True)
         monkeypatch.chdir(subdir)
@@ -147,8 +147,8 @@ class TestLoader:
 
 
 class TestWriteNew:
-    def _make_config(self) -> AgentForgeConfig:
-        return AgentForgeConfig(
+    def _make_config(self) -> AgentweldConfig:
+        return AgentweldConfig(
             agent=AgentConfig(name="My Agent", description="Does things."),
             sources=[
                 SourceConfig(
@@ -166,17 +166,17 @@ class TestWriteNew:
         )
 
     def test_creates_file(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         write_new(self._make_config(), dest)
         assert dest.exists()
 
     def test_creates_parent_dirs(self, tmp_path: Path) -> None:
-        dest = tmp_path / "nested" / "dir" / "agentforge.yaml"
+        dest = tmp_path / "nested" / "dir" / "agentweld.yaml"
         write_new(self._make_config(), dest)
         assert dest.exists()
 
     def test_round_trip(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         original = self._make_config()
         write_new(original, dest)
         reloaded = load_config(dest)
@@ -186,10 +186,10 @@ class TestWriteNew:
         assert reloaded.tools.descriptions == original.tools.descriptions
 
     def test_has_top_comment(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         write_new(self._make_config(), dest)
         content = dest.read_text()
-        assert "agentforge" in content
+        assert "agentweld" in content
         assert "#" in content  # comment present
 
 
@@ -198,8 +198,8 @@ class TestWriteNew:
 
 class TestAddSource:
     def test_adds_source(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
-        (tmp_path / "agentforge.yaml").write_text(MINIMAL_YAML)
+        dest = tmp_path / "agentweld.yaml"
+        (tmp_path / "agentweld.yaml").write_text(MINIMAL_YAML)
 
         new_src = SourceConfig(
             id="slack",
@@ -215,7 +215,7 @@ class TestAddSource:
         assert "slack" in ids
 
     def test_preserves_existing_content(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         dest.write_text(ANNOTATED_YAML)
 
         new_src = SourceConfig(
@@ -231,7 +231,7 @@ class TestAddSource:
         assert "inline comment" in content  # ruamel preserves inline comments
 
     def test_duplicate_raises(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         dest.write_text(MINIMAL_YAML)
 
         duplicate = SourceConfig(
@@ -244,7 +244,7 @@ class TestAddSource:
             add_source(duplicate, dest)
 
     def test_updates_meta_updated_at(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         dest.write_text(FULL_YAML)
 
         new_src = SourceConfig(
@@ -263,7 +263,7 @@ class TestAddSource:
 
 class TestUpdateDescriptions:
     def test_adds_new_descriptions(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         dest.write_text(MINIMAL_YAML)
 
         update_descriptions({"list_prs": "List open pull requests."}, dest)
@@ -272,7 +272,7 @@ class TestUpdateDescriptions:
         assert cfg.tools.descriptions["list_prs"] == "List open pull requests."
 
     def test_overwrites_existing_description(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         dest.write_text(FULL_YAML)
 
         update_descriptions({"find_open_prs": "Updated description."}, dest)
@@ -281,7 +281,7 @@ class TestUpdateDescriptions:
         assert cfg.tools.descriptions["find_open_prs"] == "Updated description."
 
     def test_preserves_other_descriptions(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         dest.write_text(FULL_YAML)
 
         update_descriptions({"new_tool": "Brand new."}, dest)
@@ -291,7 +291,7 @@ class TestUpdateDescriptions:
         assert cfg.tools.descriptions["new_tool"] == "Brand new."
 
     def test_preserves_comments(self, tmp_path: Path) -> None:
-        dest = tmp_path / "agentforge.yaml"
+        dest = tmp_path / "agentweld.yaml"
         dest.write_text(ANNOTATED_YAML)
 
         update_descriptions({"my_tool": "New description."}, dest)

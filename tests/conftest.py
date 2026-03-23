@@ -1,16 +1,16 @@
-"""Shared pytest fixtures for agentforge tests."""
+"""Shared pytest fixtures for agentweld tests."""
 
 from __future__ import annotations
 
 import pytest
 
-from agentforge.models.config import (
+from agentweld.models.config import (
     AgentConfig,
-    AgentForgeConfig,
+    AgentweldConfig,
     SourceConfig,
     ToolsConfig,
 )
-from agentforge.models.tool import QualityFlag, ToolDefinition
+from agentweld.models.tool import QualityFlag, ToolDefinition
 
 
 @pytest.fixture
@@ -70,8 +70,8 @@ def github_tools() -> list[ToolDefinition]:
 
 
 @pytest.fixture
-def sample_config() -> AgentForgeConfig:
-    return AgentForgeConfig(
+def sample_config() -> AgentweldConfig:
+    return AgentweldConfig(
         agent=AgentConfig(name="PR Review Agent", description="Reviews pull requests."),
         sources=[
             SourceConfig(
