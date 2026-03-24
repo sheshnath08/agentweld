@@ -8,7 +8,13 @@ from pathlib import Path
 import pytest
 
 from agentweld.config.loader import load_config
-from agentweld.config.writer import add_source, update_descriptions, write_new
+from agentweld.config.writer import (
+    EnrichmentEntry,
+    add_source,
+    update_descriptions,
+    update_descriptions_with_enrichment,
+    write_new,
+)
 from agentweld.models.config import (
     AgentConfig,
     AgentweldConfig,
@@ -299,3 +305,41 @@ class TestUpdateDescriptions:
         content = dest.read_text()
         assert "inline comment" in content
         assert "top-level comment" in content
+
+    def test_enrichment_comment_written(self, tmp_path: Path) -> None:
+        dest = tmp_path / "agentweld.yaml"
+        dest.write_text(MINIMAL_YAML)
+
+        entry = EnrichmentEntry(
+            tool_name="list_prs",
+            description="List open pull requests. Returns 404 if repo not found.",
+            original_description="Lists PRs.",
+            score_before=0.4,
+            score_after=0.85,
+            enriched_date="2026-03-24",
+        )
+        update_descriptions_with_enrichment([entry], dest)
+
+        content = dest.read_text()
+        assert "ENRICHED 2026-03-24" in content
+        assert "score_before: 0.40" in content
+        assert "score_after: 0.85" in content
+        assert "List open pull requests" in content
+
+    def test_enrichment_preserves_other_keys(self, tmp_path: Path) -> None:
+        dest = tmp_path / "agentweld.yaml"
+        dest.write_text(FULL_YAML)
+
+        entry = EnrichmentEntry(
+            tool_name="new_enriched_tool",
+            description="A newly enriched tool description.",
+            original_description="Old description.",
+            score_before=0.3,
+            score_after=0.75,
+            enriched_date="2026-03-24",
+        )
+        update_descriptions_with_enrichment([entry], dest)
+
+        cfg = load_config(dest)
+        assert "find_open_prs" in cfg.tools.descriptions
+        assert cfg.tools.descriptions["new_enriched_tool"] == "A newly enriched tool description."

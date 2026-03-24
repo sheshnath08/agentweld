@@ -31,3 +31,7 @@ class CompositionError(AgentweldError):
 
 class GeneratorError(AgentweldError):
     """An output artifact could not be generated."""
+
+
+class EnrichmentError(AgentweldError):
+    """LLM enrichment failed — API error, missing credentials, or bad response."""
