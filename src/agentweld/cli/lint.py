@@ -21,9 +21,7 @@ def lint(
     min_score: float = typer.Option(
         0.0, "--min-score", help="Only show tools at or below this score"
     ),
-    config_path: Path | None = typer.Option(
-        None, "--config", "-c", help="Path to agentweld.yaml"
-    ),
+    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to agentweld.yaml"),
 ) -> None:
     """Scan tool quality across all configured MCP sources and report issues."""
 
