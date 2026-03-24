@@ -550,6 +550,46 @@ class TestGenerateCommand:
         # Either runs successfully or says generators not available
         assert result.exit_code == 0, result.output
 
+    def test_generate_warns_for_warn_zone_tools(self, tmp_path, github_tools):
+        """generate should print a warning for tools in the warn zone (block_below ≤ score < warn_below)."""
+        from agentweld.models.config import QualityConfig
+
+        cfg = _make_config("github")
+        cfg.quality = QualityConfig(warn_below=0.8, block_below=0.4)
+        cfg.generate.output_dir = str(tmp_path / "agent")
+
+        # Tools with scores between block_below (0.4) and warn_below (0.8)
+        warn_zone_tools = []
+        for i in range(2):
+            t = ToolDefinition.from_mcp(
+                source_id="github",
+                tool_name=f"warn_tool_{i}",
+                description=f"Description for warn tool {i}.",
+                input_schema={"type": "object", "properties": {}},
+            )
+            warn_zone_tools.append(t.model_copy(update={"quality_score": 0.6}))
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=warn_zone_tools)
+
+        mock_engine = MagicMock()
+        mock_engine.run.return_value = warn_zone_tools
+
+        def _mock_run_generators(cfg, tools, composed, output_dir, only, force):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            return []
+
+        with (
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.CurationEngine", return_value=mock_engine),
+            patch("agentweld.cli.generate.run_generators", _mock_run_generators),
+        ):
+            result = runner.invoke(app, ["generate", "--force"])
+
+        assert result.exit_code == 0, result.output
+        assert "warn" in result.output.lower() or "0.60" in result.output or "warn_tool" in result.output
+
     def test_generate_quality_gate_blocks_without_force(self, tmp_path):
         """generate should fail if tools have quality scores below block_below."""
         from agentweld.models.config import QualityConfig

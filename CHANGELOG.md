@@ -5,6 +5,16 @@ All notable changes to agentweld are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — v0.2.0
+
+### Added
+- `generate` now prints a warning table for tools in the quality **warn zone** (`block_below ≤ score < warn_below`), even when `--force` is passed.
+
+### Fixed
+- `inspect.py`: removed dead-code `try/except ImportError` stub left over from the pre-phase-4 merge; `CurationEngine` is now imported directly.
+
+---
+
 ## [0.1.0] — 2026-03-22
 
 Initial public release of agentweld.
