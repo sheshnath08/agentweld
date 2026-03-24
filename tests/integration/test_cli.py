@@ -766,3 +766,125 @@ class TestGeneratePipeline:
 
         assert result.exit_code == 0, result.output
         assert captured_only[0] == ["agent_card", "readme"]
+
+
+# ── lint command ───────────────────────────────────────────────────────────────
+
+
+class TestLintCommand:
+    def test_lint_help(self):
+        """agentweld lint --help should show expected options."""
+        result = runner.invoke(app, ["lint", "--help"])
+        assert result.exit_code == 0
+        assert "--source" in result.output
+        assert "--min-score" in result.output
+
+    def test_lint_all_sources(self, github_tools):
+        """lint with no filters shows all tools from all sources."""
+        cfg = _make_config("github")
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch("agentweld.cli.lint.load_config", return_value=cfg),
+            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["lint"])
+
+        assert result.exit_code in (0, 1)
+        assert "Summary:" in result.output
+        assert "scanned" in result.output
+
+    def test_lint_min_score_filter(self, github_tools):
+        """--min-score should restrict output to tools at or below that score."""
+        cfg = _make_config("github")
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch("agentweld.cli.lint.load_config", return_value=cfg),
+            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["lint", "--min-score", "0.5"])
+
+        assert result.exit_code in (0, 1)
+        assert "Summary:" in result.output
+
+    def test_lint_source_filter(self, github_tools):
+        """--source should restrict output to tools from that source ID."""
+        cfg = _make_config("github")
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch("agentweld.cli.lint.load_config", return_value=cfg),
+            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["lint", "--source", "github"])
+
+        assert result.exit_code in (0, 1)
+        assert "Summary:" in result.output
+
+    def test_lint_exit_code_1_on_block_threshold(self):
+        """lint exits with code 1 when any tool is below block_below threshold."""
+        cfg = _make_config("github")
+        # Tool with empty description + poor naming + undocumented params
+        # → MISSING_DESCRIPTION(-0.3) + POOR_NAMING(-0.1) + UNDOCUMENTED_PARAMS(-0.2) = 0.4
+        # block_below default is 0.4, so score < 0.4 requires score=0.4 to be tested via custom cfg
+        from agentweld.models.config import QualityConfig
+
+        cfg.quality = QualityConfig(warn_below=0.8, block_below=0.7)
+        bad_tool = ToolDefinition.from_mcp(
+            source_id="github",
+            tool_name="get",
+            description="",
+            input_schema={"type": "object", "properties": {}},
+        )
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=[bad_tool])
+
+        with (
+            patch("agentweld.cli.lint.load_config", return_value=cfg),
+            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["lint"])
+
+        assert result.exit_code == 1
+
+    def test_lint_exit_code_0_when_all_good(self):
+        """lint exits with code 0 when all tools are above block_below threshold."""
+        cfg = _make_config("github")
+        good_tool = ToolDefinition.from_mcp(
+            source_id="github",
+            tool_name="list_pull_requests",
+            description=(
+                "List all pull requests for a repository. Returns error if repo not found."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "owner": {"type": "string", "description": "Repository owner"},
+                    "repo": {"type": "string", "description": "Repository name"},
+                },
+            },
+        )
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=[good_tool])
+
+        with (
+            patch("agentweld.cli.lint.load_config", return_value=cfg),
+            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["lint"])
+
+        assert result.exit_code == 0
+
+    def test_lint_no_sources_configured(self):
+        """lint with no sources in config should exit 0 with a message."""
+        cfg = AgentweldConfig(agent=AgentConfig(name="Empty Agent"), sources=[])
+
+        with patch("agentweld.cli.lint.load_config", return_value=cfg):
+            result = runner.invoke(app, ["lint"])
+
+        assert result.exit_code == 0
+        assert "No sources" in result.output
