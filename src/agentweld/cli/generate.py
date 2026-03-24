@@ -144,21 +144,18 @@ def _warn_quality_zone(tools: list[ToolDefinition], cfg: AgentweldConfig) -> Non
     warn_below = cfg.quality.warn_below
     block_below = cfg.quality.block_below
     warn_zone = [
-        t for t in tools
+        t
+        for t in tools
         if t.quality_score is not None and block_below <= t.quality_score < warn_below
     ]
     if not warn_zone:
         return
     console.print(
-        f"[yellow]⚠ {len(warn_zone)} tool(s) in quality warn zone "
-        f"(score < {warn_below:.2f}):[/]"
+        f"[yellow]⚠ {len(warn_zone)} tool(s) in quality warn zone (score < {warn_below:.2f}):[/]"
     )
     for t in warn_zone:
         flags = ", ".join(f.value for f in t.quality_flags) if t.quality_flags else "—"
-        console.print(
-            f"  [yellow]•[/] [bold]{t.name}[/] "
-            f"(score: {t.quality_score:.2f}) — {flags}"
-        )
+        console.print(f"  [yellow]•[/] [bold]{t.name}[/] (score: {t.quality_score:.2f}) — {flags}")
 
 
 def _check_quality_gate(tools: list[ToolDefinition], cfg: AgentweldConfig) -> None:
