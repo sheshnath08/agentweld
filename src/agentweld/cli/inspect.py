@@ -9,20 +9,12 @@ import anyio
 import typer
 
 from agentweld.config.loader import load_config
+from agentweld.curation.engine import CurationEngine
 from agentweld.models.config import AgentweldConfig, SourceConfig
 from agentweld.models.tool import ToolDefinition
 from agentweld.sources.registry import get_adapter
 from agentweld.utils.console import console, make_sources_table, make_tools_table
 from agentweld.utils.errors import ConfigNotFoundError, SourceConnectionError
-
-# STUB: replace with real import after phase-4/5 merge
-try:
-    from agentweld.composition.composer import ComposedToolSet, Composer
-    from agentweld.curation.engine import CurationEngine
-except ImportError:
-    CurationEngine = None  # type: ignore[assignment,misc]
-    Composer = None  # type: ignore[assignment,misc]
-    ComposedToolSet = None  # type: ignore[assignment,misc]
 
 app = typer.Typer(help="Inspect tools from configured MCP sources.", invoke_without_command=True)
 
@@ -137,25 +129,7 @@ def _show_conflicts(all_tools: list[ToolDefinition]) -> None:
 
 
 def _show_final_tools(all_tools: list[ToolDefinition], cfg: AgentweldConfig) -> None:
-    """Display post-curation tools (requires Phase 4 CurationEngine)."""
-    if CurationEngine is None:
-        console.print(
-            "[yellow]WARNING:[/] CurationEngine not available (Phase 4 not merged). "
-            "Showing raw tools instead.",
-            highlight=False,
-        )
-        tool_rows = [
-            {
-                "name": t.name,
-                "source_id": t.source_id,
-                "description": t.description_curated,
-                "quality_score": t.quality_score,
-            }
-            for t in all_tools
-        ]
-        console.print(make_tools_table(tool_rows, show_quality=True))
-        return
-
+    """Display post-curation tools."""
     engine = CurationEngine(cfg)
     curated = engine.run(all_tools)
     tool_rows = [

@@ -127,7 +127,8 @@ Run the full pipeline and write artifacts to the output directory.
 agentweld generate [OPTIONS]
 
 Options:
-  --force             Overwrite existing artifacts and bypass the quality gate
+  --force             Overwrite existing artifacts and bypass the quality block gate
+                      (warn-zone warnings are always shown)
   --only TEXT         Only generate specific artifacts (repeatable):
                       agent_card | tool_manifest | system_prompt | readme
   -o, --output-dir PATH   Override the output directory from agentweld.yaml
@@ -192,7 +193,8 @@ tools:
     search_repos: "Search GitHub repositories by keyword, language, or topic."
 
 quality:
-  block_below: 0.4    # Quality gate: fail generate if avg score < this threshold
+  warn_below: 0.6     # Print a warning table during generate for tools below this score
+  block_below: 0.4    # Quality gate: fail generate if any tool score < this threshold
                       # Use --force to bypass
 
 composition:
