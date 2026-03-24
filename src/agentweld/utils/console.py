@@ -79,6 +79,48 @@ def make_sources_table(rows: list[dict[str, Any]]) -> Table:
     return table
 
 
+def make_lint_table(tools: list[Any]) -> Table:
+    """Build a Rich table for `agentweld lint` output.
+
+    Accepts a list of ToolDefinition objects.
+    Columns: SCORE | SOURCE | NAME | FLAGS | DESCRIPTION (truncated 60 chars)
+    """
+    from agentweld.models.tool import QualityFlag
+
+    _FLAG_STYLES: dict[QualityFlag, str] = {
+        QualityFlag.MISSING_DESCRIPTION: "red",
+        QualityFlag.WEAK_DESCRIPTION: "yellow",
+        QualityFlag.UNDOCUMENTED_PARAMS: "yellow",
+        QualityFlag.POOR_NAMING: "yellow",
+        QualityFlag.NO_ERROR_GUIDANCE: "dim",
+        QualityFlag.OVERLOADED_TOOL: "dim",
+        QualityFlag.DUPLICATE_INTENT: "dim",
+    }
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("SCORE", justify="right")
+    table.add_column("SOURCE")
+    table.add_column("NAME", style="bold")
+    table.add_column("FLAGS")
+    table.add_column("DESCRIPTION")
+
+    for tool in tools:
+        flags_parts = []
+        for flag in tool.quality_flags:
+            style = _FLAG_STYLES.get(flag, "")
+            flags_parts.append(f"[{style}]{flag}[/]" if style else str(flag))
+        flags_str = ", ".join(flags_parts) if flags_parts else "[dim]none[/]"
+        desc = (tool.description_original or "")[:60]
+        table.add_row(
+            score_display(tool.quality_score),
+            tool.source_id,
+            tool.name,
+            flags_str,
+            desc,
+        )
+    return table
+
+
 def make_tools_table(tools: list[dict[str, Any]], show_quality: bool = False) -> Table:
     """Build a Rich table listing tools.
 

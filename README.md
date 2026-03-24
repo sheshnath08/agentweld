@@ -135,6 +135,30 @@ Options:
   -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
 ```
 
+### `agentweld lint`
+
+Scan tool quality across all configured sources and report issues. Exits with code 1 if any tool is below the `quality.block_below` threshold — suitable for use in CI.
+
+```
+agentweld lint [OPTIONS]
+
+Options:
+  --source TEXT       Filter to a single source ID
+  --min-score FLOAT   Only show tools at or below this score [default: 0.0 = all]
+  -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
+```
+
+Example output:
+
+```
+ SCORE  SOURCE   NAME                    FLAGS                    DESCRIPTION
+  0.85  github   list_pull_requests      none                     List pull requests in a r...
+  0.50  github   get                     poor_naming, weak_desc   Gets.
+  0.30  github   post                    poor_naming, missing_...  Posts data.
+
+Summary: 3 scanned, 2 below warn (0.6), 1 below block (0.4)
+```
+
 ### `agentweld preview`
 
 Same as `generate` but writes to a temp directory and prints artifact contents. Nothing is written to your project.

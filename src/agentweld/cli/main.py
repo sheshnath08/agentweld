@@ -13,6 +13,7 @@ from agentweld.cli.add import add  # noqa: E402
 from agentweld.cli.generate import generate  # noqa: E402
 from agentweld.cli.init import init  # noqa: E402
 from agentweld.cli.inspect import inspect  # noqa: E402
+from agentweld.cli.lint import lint  # noqa: E402
 from agentweld.cli.preview import preview  # noqa: E402
 
 app.command(name="init")(init)
@@ -20,3 +21,4 @@ app.command(name="add")(add)
 app.command(name="inspect")(inspect)
 app.command(name="generate")(generate)
 app.command(name="preview")(preview)
+app.command(name="lint")(lint)
