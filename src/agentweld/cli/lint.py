@@ -18,8 +18,12 @@ from agentweld.utils.errors import ConfigNotFoundError, SourceConnectionError
 
 def lint(
     source: str | None = typer.Option(None, "--source", help="Filter to a single source ID"),
-    min_score: float = typer.Option(0.0, "--min-score", help="Only show tools at or below this score"),
-    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to agentweld.yaml"),
+    min_score: float = typer.Option(
+        0.0, "--min-score", help="Only show tools at or below this score"
+    ),
+    config_path: Path | None = typer.Option(
+        None, "--config", "-c", help="Path to agentweld.yaml"
+    ),
 ) -> None:
     """Scan tool quality across all configured MCP sources and report issues."""
 
@@ -72,7 +76,9 @@ def lint(
     warn_below = cfg.quality.warn_below
 
     below_warn = [t for t in scored if t.quality_score is not None and t.quality_score < warn_below]
-    below_block = [t for t in scored if t.quality_score is not None and t.quality_score < block_below]
+    below_block = [
+        t for t in scored if t.quality_score is not None and t.quality_score < block_below
+    ]
 
     # Render table
     if scored:
