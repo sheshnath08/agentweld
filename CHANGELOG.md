@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - `generate` now prints a warning table for tools in the quality **warn zone** (`block_below ≤ score < warn_below`), even when `--force` is passed.
 - `agentweld lint` — new command that quality-scans all tools from configured MCP sources and reports issues. Supports `--source` (filter by source ID), `--min-score` (show only tools at or below a score threshold), and `-c/--config`. Exits with code 1 if any tool falls below `quality.block_below`; exits 0 otherwise.
 - `make_lint_table()` helper in `utils/console.py` — renders a per-tool table with SCORE, SOURCE, NAME, FLAGS (colour-coded by severity), and a truncated DESCRIPTION column.
+- `generate --enrich` — new flag that runs an LLM enrichment pass immediately after source introspection, writes updated descriptions back to `agentweld.yaml`, then reloads config before curation and generation. Requires `pip install agentweld[anthropic]` or `agentweld[openai]`.
 
 ### Fixed
 - `inspect.py`: removed dead-code `try/except ImportError` stub left over from the pre-phase-4 merge; `CurationEngine` is now imported directly.

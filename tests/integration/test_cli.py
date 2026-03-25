@@ -493,7 +493,13 @@ class TestGenerateCommand:
             agent=AgentConfig(name="Empty Agent"),
             sources=[],
         )
-        with patch("agentweld.cli.generate.load_config", return_value=cfg):
+        with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+        ):
             result = runner.invoke(app, ["generate"])
 
         assert result.exit_code == 0
@@ -508,6 +514,10 @@ class TestGenerateCommand:
         mock_adapter.introspect = AsyncMock(side_effect=SourceConnectionError("refused"))
 
         with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
             patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
         ):
@@ -524,6 +534,10 @@ class TestGenerateCommand:
         mock_adapter.introspect = AsyncMock(side_effect=SourceConnectionError("refused"))
 
         with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
             patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
         ):
@@ -543,6 +557,10 @@ class TestGenerateCommand:
         mock_adapter.introspect = AsyncMock(return_value=github_tools)
 
         with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
             patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
         ):
@@ -581,6 +599,10 @@ class TestGenerateCommand:
             return []
 
         with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
             patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
             patch("agentweld.cli.generate.CurationEngine", return_value=mock_engine),
@@ -617,6 +639,10 @@ class TestGenerateCommand:
         mock_engine.run.return_value = low_quality_tools
 
         with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
             patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
             patch("agentweld.cli.generate.CurationEngine", return_value=mock_engine),
@@ -626,6 +652,61 @@ class TestGenerateCommand:
         # Should fail due to quality gate
         assert result.exit_code != 0
         assert "quality" in result.output.lower() or "threshold" in result.output.lower()
+
+    def test_generate_enrich_flag_calls_enrichment(self, tmp_path, github_tools):
+        """--enrich flag should invoke run_enrich_pass after introspection."""
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path / "agent")
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        def _mock_run_generators(cfg, tools, composed, output_dir, only, force):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            return []
+
+        with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
+            patch("agentweld.cli.generate.load_config", side_effect=[cfg, cfg]),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.run_enrich_pass") as mock_enrich_pass,
+            patch("agentweld.cli.generate.run_generators", _mock_run_generators),
+        ):
+            result = runner.invoke(app, ["generate", "--enrich", "--force"])
+
+        assert result.exit_code == 0, result.output
+        mock_enrich_pass.assert_called_once()
+        assert mock_enrich_pass.call_args[0][2] == Path("/fake/agentweld.yaml")
+
+    def test_generate_without_enrich_flag_skips_enrichment(self, tmp_path, github_tools):
+        """Without --enrich, run_enrich_pass must NOT be called."""
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path / "agent")
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        def _mock_run_generators(cfg, tools, composed, output_dir, only, force):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            return []
+
+        with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.run_enrich_pass") as mock_enrich_pass,
+            patch("agentweld.cli.generate.run_generators", _mock_run_generators),
+        ):
+            result = runner.invoke(app, ["generate", "--force"])
+
+        assert result.exit_code == 0, result.output
+        mock_enrich_pass.assert_not_called()
 
 
 # ── preview command ───────────────────────────────────────────────────────────
@@ -732,6 +813,10 @@ class TestGeneratePipeline:
             return [out]
 
         with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
             patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
             patch("agentweld.cli.generate.run_generators", _mock_run_generators),
@@ -757,6 +842,10 @@ class TestGeneratePipeline:
             return []
 
         with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
             patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
             patch("agentweld.cli.generate.run_generators", _mock_run_generators),

@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
 
+import anyio
+
+from agentweld.config.writer import EnrichmentEntry, update_descriptions_with_enrichment
 from agentweld.curation.quality import QualityScanner
-from agentweld.models.config import EnrichmentConfig
+from agentweld.models.config import AgentweldConfig, EnrichmentConfig
 from agentweld.models.tool import ToolDefinition
+from agentweld.utils.console import console
 from agentweld.utils.errors import EnrichmentError
 
 _SYSTEM_PROMPT = (
@@ -147,3 +153,42 @@ class LLMEnricher:
             return response.choices[0].message.content or ""
         except openai.APIError as exc:
             raise EnrichmentError(f"OpenAI API error: {exc}") from exc
+
+
+def run_enrich_pass(
+    tools: list[ToolDefinition],
+    cfg: AgentweldConfig,
+    yaml_path: Path,
+) -> None:
+    """Sync wrapper: enrich *tools* and write results to *yaml_path*.
+
+    Raises :exc:`EnrichmentError` on API or parse failure.
+    Silently skips if *tools* is empty.
+    """
+    if not tools:
+        return
+
+    enricher = LLMEnricher(cfg.enrichment)
+
+    async def _run() -> list[EnrichmentResult]:
+        return await enricher.enrich_batch_async(tools)
+
+    results = anyio.run(_run)
+
+    tool_by_name = {t.name: t for t in tools}
+    entries = [
+        EnrichmentEntry(
+            tool_name=r.tool_name,
+            description=r.description_new,
+            original_description=tool_by_name[r.tool_name].description_original,
+            score_before=r.score_before,
+            score_after=r.score_after,
+            enriched_date=date.today().isoformat(),
+        )
+        for r in results
+        if r.tool_name in tool_by_name
+    ]
+
+    if entries:
+        update_descriptions_with_enrichment(entries, yaml_path)
+        console.print(f"[dim]Enrichment pass: {len(entries)} description(s) updated.[/]")

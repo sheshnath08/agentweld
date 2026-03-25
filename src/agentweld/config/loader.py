@@ -94,6 +94,10 @@ def _resolve_path(path: Path | str | None) -> Path:
     )
 
 
+#: Public alias — callers outside this module should import this name.
+resolve_config_path = _resolve_path
+
+
 def _read_yaml(path: Path) -> dict[str, object]:
     try:
         with path.open("r", encoding="utf-8") as fh:
