@@ -26,9 +26,7 @@ def enrich(
         None, "--below", help="Enrich tools below this quality score"
     ),
     source: str | None = typer.Option(None, "--source", help="Filter to a single source ID"),
-    config_path: Path | None = typer.Option(
-        None, "--config", "-c", help="Path to agentweld.yaml"
-    ),
+    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to agentweld.yaml"),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Preview what would be enriched without writing"
     ),

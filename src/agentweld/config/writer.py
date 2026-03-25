@@ -24,6 +24,7 @@ class EnrichmentEntry:
     score_after: float
     enriched_date: str  # ISO date string e.g. "2026-03-24"
 
+
 _yaml = YAML()
 _yaml.preserve_quotes = True
 _yaml.default_flow_style = False

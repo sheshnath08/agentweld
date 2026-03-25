@@ -69,9 +69,7 @@ class LLMEnricher:
             )
         return json.dumps(payload, indent=2)
 
-    def _parse_response(
-        self, response: str, tools: list[ToolDefinition]
-    ) -> list[EnrichmentResult]:
+    def _parse_response(self, response: str, tools: list[ToolDefinition]) -> list[EnrichmentResult]:
         """Parse the LLM JSON response and re-score each enriched description."""
         try:
             items = json.loads(response)
