@@ -8,8 +8,9 @@ import anyio
 import typer
 
 from agentweld.composition.composer import ComposedToolSet, Composer
-from agentweld.config.loader import load_config
+from agentweld.config.loader import load_config, resolve_config_path
 from agentweld.curation.engine import CurationEngine
+from agentweld.curation.enricher import run_enrich_pass
 from agentweld.generators.runner import run_generators
 from agentweld.models.config import AgentweldConfig, SourceConfig
 from agentweld.models.tool import ToolDefinition
@@ -18,6 +19,7 @@ from agentweld.utils.console import console
 from agentweld.utils.errors import (
     AgentweldError,
     ConfigNotFoundError,
+    EnrichmentError,
     QualityGateError,
     SourceConnectionError,
 )
@@ -33,11 +35,15 @@ def generate(
     output_dir: Path | None = typer.Option(
         None, "--output-dir", "-o", help="Override output directory"
     ),
+    enrich_first: bool = typer.Option(
+        False, "--enrich", help="Run LLM enrichment pass before generating"
+    ),
 ) -> None:
     """Full pipeline: load config → introspect → curate → compose → generate artifacts."""
 
     # 1. Load config
     try:
+        yaml_path = resolve_config_path(config_path)
         cfg = load_config(config_path)
     except ConfigNotFoundError as e:
         console.print(f"[red]Config not found:[/] {e}")
@@ -84,6 +90,16 @@ def generate(
         raise typer.Exit(code=0)
 
     console.print(f"[cyan]Total tools discovered:[/] {len(all_tools)}")
+
+    # 2.5 Optional LLM enrichment pass (--enrich flag)
+    if enrich_first:
+        console.print("[cyan]Running enrichment pass...[/]")
+        try:
+            run_enrich_pass(all_tools, cfg, yaml_path)
+        except EnrichmentError as e:
+            console.print(f"[red]Enrichment failed:[/] {e}")
+            raise typer.Exit(code=1)
+        cfg = load_config(config_path)  # reload to pick up new descriptions
 
     # 3. Curate
     console.print("[cyan]Running curation engine...[/]")

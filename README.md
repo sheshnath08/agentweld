@@ -131,6 +131,10 @@ Options:
                       (warn-zone warnings are always shown)
   --only TEXT         Only generate specific artifacts (repeatable):
                       agent_card | tool_manifest | system_prompt | readme
+  --enrich            Run an LLM enrichment pass on discovered tools before
+                      generating. Writes improved descriptions back to
+                      agentweld.yaml, then reloads config. Requires
+                      pip install agentweld[anthropic] or agentweld[openai].
   -o, --output-dir PATH   Override the output directory from agentweld.yaml
   -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
 ```
