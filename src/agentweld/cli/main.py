@@ -10,6 +10,7 @@ app = typer.Typer(
 
 # Import and register each command function directly on the root app
 from agentweld.cli.add import add  # noqa: E402
+from agentweld.cli.enrich import enrich  # noqa: E402
 from agentweld.cli.generate import generate  # noqa: E402
 from agentweld.cli.init import init  # noqa: E402
 from agentweld.cli.inspect import inspect  # noqa: E402
@@ -22,3 +23,4 @@ app.command(name="inspect")(inspect)
 app.command(name="generate")(generate)
 app.command(name="preview")(preview)
 app.command(name="lint")(lint)
+app.command(name="enrich")(enrich)

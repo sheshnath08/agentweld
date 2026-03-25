@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,19 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from agentweld.models.config import AgentweldConfig, SourceConfig
+
+
+@dataclass
+class EnrichmentEntry:
+    """Enrichment result for a single tool, written back to agentweld.yaml."""
+
+    tool_name: str
+    description: str
+    original_description: str
+    score_before: float
+    score_after: float
+    enriched_date: str  # ISO date string e.g. "2026-03-24"
+
 
 _yaml = YAML()
 _yaml.preserve_quotes = True
@@ -227,6 +241,50 @@ def update_descriptions(descriptions: dict[str, str], path: Path | str) -> None:
 
     for tool_name, description in descriptions.items():
         desc_map[tool_name] = description
+
+    if isinstance(data.get("meta"), dict):
+        data["meta"]["updated_at"] = _now_iso()
+
+    with dest.open("w", encoding="utf-8") as fh:
+        _yaml.dump(data, fh)
+
+
+def update_descriptions_with_enrichment(
+    entries: list[EnrichmentEntry],
+    path: Path | str,
+) -> None:
+    """Merge LLM-enriched descriptions into ``tools.descriptions`` with provenance comments.
+
+    For each entry, the description value is written and a YAML comment is added above
+    the key recording the enrichment date, original description, and before/after scores.
+    Existing keys not in ``entries`` are untouched.
+
+    Args:
+        entries: List of enrichment results to write back.
+        path: Path to the existing agentweld.yaml.
+    """
+    dest = Path(path)
+
+    with dest.open("r", encoding="utf-8") as fh:
+        data = _yaml.load(fh)
+
+    if data is None or not isinstance(data, dict):
+        raise ValueError(f"{dest} does not contain a valid YAML mapping.")
+
+    tools = data.setdefault("tools", CommentedMap())
+    desc_map = tools.setdefault("descriptions", CommentedMap())
+
+    for entry in entries:
+        # Set value FIRST — ruamel drops comments set on non-existent keys
+        desc_map[entry.tool_name] = entry.description
+        # Add provenance comment above the key (ruamel adds "#" automatically)
+        if isinstance(desc_map, CommentedMap):
+            comment = (
+                f"ENRICHED {entry.enriched_date} — original: {entry.original_description}\n"
+                f"quality_score_before: {entry.score_before:.2f}  "
+                f"quality_score_after: {entry.score_after:.2f}"
+            )
+            desc_map.yaml_set_comment_before_after_key(entry.tool_name, before=comment)
 
     if isinstance(data.get("meta"), dict):
         data["meta"]["updated_at"] = _now_iso()

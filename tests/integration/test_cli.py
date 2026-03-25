@@ -19,6 +19,7 @@ from agentweld.models.config import (
     ToolsConfig,
 )
 from agentweld.models.tool import ToolDefinition
+from agentweld.utils.errors import EnrichmentError
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -62,7 +63,7 @@ class TestHelp:
         """agentweld --help should list all registered sub-commands."""
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        for cmd in ["init", "add", "inspect", "generate", "preview"]:
+        for cmd in ["init", "add", "inspect", "generate", "preview", "enrich"]:
             assert cmd in result.output
 
     def test_init_help(self):
@@ -888,3 +889,129 @@ class TestLintCommand:
 
         assert result.exit_code == 0
         assert "No sources" in result.output
+
+
+# ── enrich command ─────────────────────────────────────────────────────────────
+
+
+class TestEnrichCommand:
+    def test_enrich_help(self):
+        """agentweld enrich --help should show expected options."""
+        result = runner.invoke(app, ["enrich", "--help"])
+        assert result.exit_code == 0
+        assert "--tool" in result.output
+        assert "--below" in result.output
+        assert "--dry-run" in result.output
+
+    def test_enrich_dry_run_no_op(self, github_tools):
+        """--dry-run should preview but not write anything."""
+        cfg = _make_config("github")
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch("agentweld.cli.enrich.load_config", return_value=cfg),
+            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.update_descriptions_with_enrichment") as mock_write,
+            patch("agentweld.cli.enrich._resolve_path", return_value=Path("/fake/agentweld.yaml")),
+        ):
+            result = runner.invoke(app, ["enrich", "--dry-run", "--below", "1.0"])
+
+        assert result.exit_code == 0
+        mock_write.assert_not_called()
+        assert "Dry run" in result.output
+
+    def test_enrich_below_threshold_selects_tools(self, github_tools):
+        """--below should select tools below the given score and enrich them."""
+        from agentweld.curation.enricher import EnrichmentResult
+
+        cfg = _make_config("github")
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        mock_results = [
+            EnrichmentResult(
+                tool_name=github_tools[0].name,
+                description_new="Improved description with error handling details.",
+                suggested_rename=None,
+                score_before=0.5,
+                score_after=0.85,
+            )
+        ]
+
+        with (
+            patch("agentweld.cli.enrich.load_config", return_value=cfg),
+            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.LLMEnricher") as mock_enricher_cls,
+            patch("agentweld.cli.enrich.update_descriptions_with_enrichment"),
+            patch("agentweld.cli.enrich._resolve_path", return_value=Path("/fake/agentweld.yaml")),
+        ):
+            mock_enricher = MagicMock()
+            mock_enricher.enrich_batch_async = AsyncMock(return_value=mock_results)
+            mock_enricher_cls.return_value = mock_enricher
+
+            result = runner.invoke(app, ["enrich", "--below", "1.0"])
+
+        assert result.exit_code == 0
+        assert "enriched description" in result.output
+
+    def test_enrich_specific_tool(self, github_tools):
+        """--tool should enrich only the named tool."""
+        from agentweld.curation.enricher import EnrichmentResult
+
+        target = github_tools[0]
+        cfg = _make_config("github")
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        mock_results = [
+            EnrichmentResult(
+                tool_name=target.name,
+                description_new="Targeted enriched description.",
+                suggested_rename=None,
+                score_before=0.6,
+                score_after=0.9,
+            )
+        ]
+
+        with (
+            patch("agentweld.cli.enrich.load_config", return_value=cfg),
+            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.LLMEnricher") as mock_enricher_cls,
+            patch("agentweld.cli.enrich.update_descriptions_with_enrichment"),
+            patch("agentweld.cli.enrich._resolve_path", return_value=Path("/fake/agentweld.yaml")),
+        ):
+            mock_enricher = MagicMock()
+            mock_enricher.enrich_batch_async = AsyncMock(return_value=mock_results)
+            mock_enricher_cls.return_value = mock_enricher
+
+            result = runner.invoke(app, ["enrich", "--tool", target.name])
+
+        assert result.exit_code == 0
+        # Verify enricher was called with only the specific tool
+        called_tools = mock_enricher.enrich_batch_async.call_args[0][0]
+        assert all(t.name == target.name for t in called_tools)
+
+    def test_enrich_missing_sdk_shows_error(self, github_tools):
+        """EnrichmentError from missing SDK should exit 1 with a friendly message."""
+        cfg = _make_config("github")
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch("agentweld.cli.enrich.load_config", return_value=cfg),
+            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.LLMEnricher") as mock_enricher_cls,
+        ):
+            mock_enricher = MagicMock()
+            mock_enricher.enrich_batch_async = AsyncMock(
+                side_effect=EnrichmentError(
+                    "anthropic SDK not installed. Run: pip install agentweld[anthropic]"
+                )
+            )
+            mock_enricher_cls.return_value = mock_enricher
+
+            result = runner.invoke(app, ["enrich", "--below", "1.0"])
+
+        assert result.exit_code == 1
+        assert "Enrichment failed" in result.output
