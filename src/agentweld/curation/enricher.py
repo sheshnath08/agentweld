@@ -108,7 +108,7 @@ class LLMEnricher:
     async def _call_anthropic(self, prompt: str) -> str:
         """Call Anthropic API with lazy import."""
         try:
-            import anthropic
+            import anthropic  # type: ignore[import-not-found]
         except ImportError as exc:
             raise EnrichmentError(
                 "anthropic SDK not installed. Run: pip install agentweld[anthropic]"
@@ -122,14 +122,14 @@ class LLMEnricher:
                 system=_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return message.content[0].text
+            return str(message.content[0].text)
         except anthropic.APIError as exc:
             raise EnrichmentError(f"Anthropic API error: {exc}") from exc
 
     async def _call_openai(self, prompt: str) -> str:
         """Call OpenAI API with lazy import."""
         try:
-            import openai
+            import openai  # type: ignore[import-not-found]
         except ImportError as exc:
             raise EnrichmentError(
                 "openai SDK not installed. Run: pip install agentweld[openai]"
