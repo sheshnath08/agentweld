@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from agentweld.utils.errors import PluginError
 
 if TYPE_CHECKING:
+    from agentweld.models.config import SourceConfig
     from agentweld.sources.base import SourceAdapter
 
 logger = logging.getLogger(__name__)
@@ -49,15 +50,17 @@ def register_adapter(transport_key: str, adapter: SourceAdapter) -> None:
 
 
 def _register_builtin_adapters() -> None:
-    """Register the two built-in adapters (stdio + streamable-http).
+    """Register the built-in adapters (stdio, streamable-http, mcp_registry).
 
     Deferred import avoids circular dependencies at module load time.
     """
     from agentweld.sources.mcp_http import MCPHttpAdapter
+    from agentweld.sources.mcp_registry import MCPRegistryAdapter
     from agentweld.sources.mcp_stdio import MCPStdioAdapter
 
     _REGISTRY.setdefault("stdio", MCPStdioAdapter())
     _REGISTRY.setdefault("streamable-http", MCPHttpAdapter())
+    _REGISTRY.setdefault("mcp_registry", MCPRegistryAdapter())
 
 
 def _ensure_loaded() -> None:
@@ -105,6 +108,23 @@ def get_adapter(transport_key: str) -> SourceAdapter:
             f"No adapter registered for transport '{transport_key}'. Available: {available}"
         )
     return _REGISTRY[transport_key]
+
+
+def get_adapter_for_source(src_cfg: SourceConfig) -> SourceAdapter:
+    """Return the right adapter based on source type and transport.
+
+    Dispatches on ``type == "mcp_registry"`` first, then falls back to
+    ``transport or "stdio"`` for standard MCP servers.
+
+    Args:
+        src_cfg: The source config to dispatch on.
+
+    Returns:
+        The registered SourceAdapter instance.
+    """
+    if src_cfg.type == "mcp_registry":
+        return get_adapter("mcp_registry")
+    return get_adapter(src_cfg.transport or "stdio")
 
 
 def list_adapters() -> dict[str, SourceAdapter]:

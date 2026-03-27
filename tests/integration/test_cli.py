@@ -368,7 +368,7 @@ class TestInspectCommand:
 
         with (
             patch("agentweld.cli.inspect.load_config", return_value=cfg),
-            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect", "--source"])
 
@@ -384,7 +384,7 @@ class TestInspectCommand:
 
         with (
             patch("agentweld.cli.inspect.load_config", return_value=cfg),
-            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect"])
 
@@ -411,7 +411,7 @@ class TestInspectCommand:
 
         with (
             patch("agentweld.cli.inspect.load_config", return_value=cfg),
-            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect", "--conflicts"])
 
@@ -459,7 +459,7 @@ class TestInspectCommand:
 
         with (
             patch("agentweld.cli.inspect.load_config", return_value=cfg),
-            patch("agentweld.cli.inspect.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.inspect.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["inspect", "--conflicts"])
 
@@ -519,7 +519,7 @@ class TestGenerateCommand:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["generate"])
 
@@ -539,7 +539,7 @@ class TestGenerateCommand:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["generate", "--force"])
 
@@ -562,7 +562,7 @@ class TestGenerateCommand:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["generate", "--force"])
 
@@ -604,7 +604,7 @@ class TestGenerateCommand:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.generate.CurationEngine", return_value=mock_engine),
             patch("agentweld.cli.generate.run_generators", _mock_run_generators),
         ):
@@ -644,7 +644,7 @@ class TestGenerateCommand:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.generate.CurationEngine", return_value=mock_engine),
         ):
             result = runner.invoke(app, ["generate"])
@@ -671,7 +671,7 @@ class TestGenerateCommand:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", side_effect=[cfg, cfg]),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.generate.run_enrich_pass") as mock_enrich_pass,
             patch("agentweld.cli.generate.run_generators", _mock_run_generators),
         ):
@@ -699,7 +699,7 @@ class TestGenerateCommand:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.generate.run_enrich_pass") as mock_enrich_pass,
             patch("agentweld.cli.generate.run_generators", _mock_run_generators),
         ):
@@ -751,7 +751,7 @@ class TestPreviewCommand:
 
         with (
             patch("agentweld.cli.preview.load_config", return_value=cfg),
-            patch("agentweld.cli.preview.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.preview.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.preview.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(app, ["preview"])
@@ -777,7 +777,7 @@ class TestPreviewCommand:
 
         with (
             patch("agentweld.cli.preview.load_config", return_value=cfg),
-            patch("agentweld.cli.preview.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.preview.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.preview.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(app, ["preview"])
@@ -818,7 +818,7 @@ class TestGeneratePipeline:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.generate.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(app, ["generate", "--force"])
@@ -847,7 +847,7 @@ class TestGeneratePipeline:
                 return_value=Path("/fake/agentweld.yaml"),
             ),
             patch("agentweld.cli.generate.load_config", return_value=cfg),
-            patch("agentweld.cli.generate.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.generate.run_generators", _mock_run_generators),
         ):
             result = runner.invoke(
@@ -877,7 +877,7 @@ class TestLintCommand:
 
         with (
             patch("agentweld.cli.lint.load_config", return_value=cfg),
-            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.lint.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["lint"])
 
@@ -893,7 +893,7 @@ class TestLintCommand:
 
         with (
             patch("agentweld.cli.lint.load_config", return_value=cfg),
-            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.lint.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["lint", "--min-score", "0.5"])
 
@@ -908,7 +908,7 @@ class TestLintCommand:
 
         with (
             patch("agentweld.cli.lint.load_config", return_value=cfg),
-            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.lint.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["lint", "--source", "github"])
 
@@ -935,7 +935,7 @@ class TestLintCommand:
 
         with (
             patch("agentweld.cli.lint.load_config", return_value=cfg),
-            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.lint.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["lint"])
 
@@ -963,7 +963,7 @@ class TestLintCommand:
 
         with (
             patch("agentweld.cli.lint.load_config", return_value=cfg),
-            patch("agentweld.cli.lint.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.lint.get_adapter_for_source", return_value=mock_adapter),
         ):
             result = runner.invoke(app, ["lint"])
 
@@ -1000,7 +1000,7 @@ class TestEnrichCommand:
 
         with (
             patch("agentweld.cli.enrich.load_config", return_value=cfg),
-            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.enrich.update_descriptions_with_enrichment") as mock_write,
             patch("agentweld.cli.enrich._resolve_path", return_value=Path("/fake/agentweld.yaml")),
         ):
@@ -1030,7 +1030,7 @@ class TestEnrichCommand:
 
         with (
             patch("agentweld.cli.enrich.load_config", return_value=cfg),
-            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.enrich.LLMEnricher") as mock_enricher_cls,
             patch("agentweld.cli.enrich.update_descriptions_with_enrichment"),
             patch("agentweld.cli.enrich._resolve_path", return_value=Path("/fake/agentweld.yaml")),
@@ -1065,7 +1065,7 @@ class TestEnrichCommand:
 
         with (
             patch("agentweld.cli.enrich.load_config", return_value=cfg),
-            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.enrich.LLMEnricher") as mock_enricher_cls,
             patch("agentweld.cli.enrich.update_descriptions_with_enrichment"),
             patch("agentweld.cli.enrich._resolve_path", return_value=Path("/fake/agentweld.yaml")),
@@ -1089,7 +1089,7 @@ class TestEnrichCommand:
 
         with (
             patch("agentweld.cli.enrich.load_config", return_value=cfg),
-            patch("agentweld.cli.enrich.get_adapter", return_value=mock_adapter),
+            patch("agentweld.cli.enrich.get_adapter_for_source", return_value=mock_adapter),
             patch("agentweld.cli.enrich.LLMEnricher") as mock_enricher_cls,
         ):
             mock_enricher = MagicMock()

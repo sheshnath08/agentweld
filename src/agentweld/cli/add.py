@@ -12,7 +12,7 @@ import typer
 from agentweld.config.loader import load_config
 from agentweld.config.writer import add_source
 from agentweld.models.config import SourceConfig
-from agentweld.sources.registry import get_adapter
+from agentweld.sources.registry import get_adapter_for_source
 from agentweld.utils.console import console, make_tools_table
 from agentweld.utils.errors import AgentweldError, ConfigNotFoundError, SourceConnectionError
 
@@ -82,7 +82,7 @@ def add(
 
     # Introspect
     console.print(f"[cyan]Connecting to[/] {source}...")
-    adapter = get_adapter(transport)
+    adapter = get_adapter_for_source(source_config)
     try:
         tools = anyio.run(adapter.introspect, source_config)
     except SourceConnectionError as e:

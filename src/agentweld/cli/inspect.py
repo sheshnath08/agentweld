@@ -12,7 +12,7 @@ from agentweld.config.loader import load_config
 from agentweld.curation.engine import CurationEngine
 from agentweld.models.config import AgentweldConfig, SourceConfig
 from agentweld.models.tool import ToolDefinition
-from agentweld.sources.registry import get_adapter
+from agentweld.sources.registry import get_adapter_for_source
 from agentweld.utils.console import console, make_sources_table, make_tools_table
 from agentweld.utils.errors import ConfigNotFoundError, SourceConnectionError
 
@@ -45,9 +45,8 @@ def inspect(
 
     async def _introspect_all() -> None:
         async def _introspect_one(src_cfg: SourceConfig) -> None:
-            transport = src_cfg.transport or "stdio"
             try:
-                adapter = get_adapter(transport)
+                adapter = get_adapter_for_source(src_cfg)
                 tools = await adapter.introspect(src_cfg)
                 tools_by_source[src_cfg.id] = tools
                 all_tools.extend(tools)
