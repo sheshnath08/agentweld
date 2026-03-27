@@ -14,7 +14,14 @@ from agentweld.models.tool import ToolDefinition
 from agentweld.sources.base import SourceAdapter
 from agentweld.sources.mcp_http import MCPHttpAdapter
 from agentweld.sources.mcp_stdio import MCPStdioAdapter
-from agentweld.sources.registry import _reset_registry, get_adapter, list_adapters, register_adapter
+from agentweld.sources.mcp_registry import MCPRegistryAdapter
+from agentweld.sources.registry import (
+    _reset_registry,
+    get_adapter,
+    get_adapter_for_source,
+    list_adapters,
+    register_adapter,
+)
 from agentweld.utils.errors import PluginError, SourceConnectionError
 
 
@@ -315,3 +322,136 @@ class TestRegistry:
         assert a is not b  # independent copies
         assert "stdio" in a
         assert "streamable-http" in a
+
+    def test_get_adapter_for_source_mcp_registry(self):
+        src = SourceConfig(id="r", type="mcp_registry", registry_id="stripe/stripe-mcp")
+        adapter = get_adapter_for_source(src)
+        assert isinstance(adapter, MCPRegistryAdapter)
+
+    def test_get_adapter_for_source_stdio(self):
+        src = SourceConfig(
+            id="s", type="mcp_server", transport="stdio", command="npx @foo/server"
+        )
+        adapter = get_adapter_for_source(src)
+        assert isinstance(adapter, MCPStdioAdapter)
+
+    def test_get_adapter_for_source_http(self):
+        src = SourceConfig(
+            id="h", type="mcp_server", transport="streamable-http", url="http://localhost/mcp"
+        )
+        adapter = get_adapter_for_source(src)
+        assert isinstance(adapter, MCPHttpAdapter)
+
+
+# ── MCPRegistryAdapter ────────────────────────────────────────────────────────
+
+
+class TestMCPRegistryAdapter:
+    @pytest.mark.asyncio
+    async def test_resolves_and_delegates_http(self, sample_tool):
+        """Registry returns a URL → delegates to MCPHttpAdapter, returns ToolDefinitions."""
+        registry_entry = {"url": "http://mcp.example.com/stripe"}
+        config = SourceConfig(id="stripe", type="mcp_registry", registry_id="stripe/stripe-mcp")
+
+        with (
+            patch(
+                "agentweld.sources.mcp_registry.httpx.AsyncClient",
+            ) as mock_client_cls,
+            patch.object(MCPHttpAdapter, "introspect", new_callable=AsyncMock, return_value=[sample_tool]),
+        ):
+            mock_response = MagicMock()
+            mock_response.raise_for_status = MagicMock()
+            mock_response.json = MagicMock(return_value=registry_entry)
+
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            adapter = MCPRegistryAdapter()
+            result = await adapter.introspect(config)
+
+        assert result == [sample_tool]
+
+    @pytest.mark.asyncio
+    async def test_resolves_and_delegates_stdio(self, sample_tool):
+        """Registry returns a command → delegates to MCPStdioAdapter."""
+        registry_entry = {"command": "npx @stripe/mcp-server"}
+        config = SourceConfig(id="stripe", type="mcp_registry", registry_id="stripe/stripe-mcp")
+
+        with (
+            patch(
+                "agentweld.sources.mcp_registry.httpx.AsyncClient",
+            ) as mock_client_cls,
+            patch.object(MCPStdioAdapter, "introspect", new_callable=AsyncMock, return_value=[sample_tool]),
+        ):
+            mock_response = MagicMock()
+            mock_response.raise_for_status = MagicMock()
+            mock_response.json = MagicMock(return_value=registry_entry)
+
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            adapter = MCPRegistryAdapter()
+            result = await adapter.introspect(config)
+
+        assert result == [sample_tool]
+
+    @pytest.mark.asyncio
+    async def test_http_error_raises_source_connection_error(self):
+        """An HTTP error from the registry raises SourceConnectionError."""
+        import httpx
+
+        config = SourceConfig(id="stripe", type="mcp_registry", registry_id="stripe/stripe-mcp")
+
+        with patch("agentweld.sources.mcp_registry.httpx.AsyncClient") as mock_client_cls:
+            mock_response = MagicMock()
+            mock_response.status_code = 404
+            http_error = httpx.HTTPStatusError(
+                "Not Found", request=MagicMock(), response=mock_response
+            )
+
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(side_effect=http_error)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            adapter = MCPRegistryAdapter()
+            with pytest.raises(SourceConnectionError, match="Registry lookup failed"):
+                await adapter.introspect(config)
+
+    @pytest.mark.asyncio
+    async def test_entry_with_neither_url_nor_command_raises(self):
+        """Registry entry missing both 'url' and 'command' raises SourceConnectionError."""
+        config = SourceConfig(id="stripe", type="mcp_registry", registry_id="stripe/stripe-mcp")
+
+        with patch("agentweld.sources.mcp_registry.httpx.AsyncClient") as mock_client_cls:
+            mock_response = MagicMock()
+            mock_response.raise_for_status = MagicMock()
+            mock_response.json = MagicMock(return_value={})  # empty — no url or command
+
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            adapter = MCPRegistryAdapter()
+            with pytest.raises(SourceConnectionError, match="neither 'url' nor 'command'"):
+                await adapter.introspect(config)
+
+    @pytest.mark.asyncio
+    async def test_missing_registry_id_raises_source_connection_error(self):
+        """Adapter guard: missing registry_id raises SourceConnectionError directly."""
+        # Bypass Pydantic validator using model_construct so the adapter guard is tested
+        config = SourceConfig.model_construct(
+            id="reg", type="mcp_registry", registry_id=None, env={}
+        )
+        adapter = MCPRegistryAdapter()
+        with pytest.raises(SourceConnectionError, match="requires 'registry_id'"):
+            await adapter.introspect(config)

@@ -70,6 +70,8 @@ def _config_to_commented_map(config: AgentweldConfig) -> CommentedMap:
     sources_seq = CommentedSeq()
     for src in config.sources:
         entry = _cm(id=src.id, type=src.type)
+        if src.registry_id:
+            entry["registry_id"] = src.registry_id
         if src.transport:
             entry["transport"] = src.transport
         if src.command:

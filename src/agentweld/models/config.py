@@ -32,6 +32,8 @@ class SourceConfig(BaseModel):
     auth: BearerAuth | None = None
     # env vars (values may use ${VAR} syntax)
     env: dict[str, str] = Field(default_factory=dict)
+    # registry (only used when type == "mcp_registry")
+    registry_id: str | None = None
 
     @model_validator(mode="after")
     def validate_transport_fields(self) -> SourceConfig:
@@ -40,6 +42,8 @@ class SourceConfig(BaseModel):
                 raise ValueError(f"Source '{self.id}': stdio transport requires 'command'")
             if self.transport == "streamable-http" and not self.url:
                 raise ValueError(f"Source '{self.id}': streamable-http transport requires 'url'")
+        if self.type == "mcp_registry" and not self.registry_id:
+            raise ValueError(f"Source '{self.id}': mcp_registry type requires 'registry_id'")
         return self
 
 

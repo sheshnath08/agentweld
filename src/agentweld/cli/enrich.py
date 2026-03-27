@@ -15,7 +15,7 @@ from agentweld.curation.enricher import EnrichmentResult, LLMEnricher
 from agentweld.curation.quality import QualityScanner
 from agentweld.models.config import SourceConfig
 from agentweld.models.tool import ToolDefinition
-from agentweld.sources.registry import get_adapter
+from agentweld.sources.registry import get_adapter_for_source
 from agentweld.utils.console import console, make_lint_table
 from agentweld.utils.errors import ConfigNotFoundError, EnrichmentError, SourceConnectionError
 
@@ -49,9 +49,8 @@ def enrich(
 
     async def _introspect_all() -> None:
         async def _introspect_one(src_cfg: SourceConfig) -> None:
-            transport = src_cfg.transport or "stdio"
             try:
-                adapter = get_adapter(transport)
+                adapter = get_adapter_for_source(src_cfg)
                 tools = await adapter.introspect(src_cfg)
                 all_tools.extend(tools)
             except SourceConnectionError as e:
