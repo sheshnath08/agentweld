@@ -58,7 +58,7 @@ class MCPRegistryAdapter:
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
-    async def _resolve(self, registry_id: str) -> dict:
+    async def _resolve(self, registry_id: str) -> dict[str, object]:
         """Fetch the registry entry for *registry_id* and return the JSON payload."""
         url = f"{REGISTRY_BASE}/servers/{registry_id}"
         try:
@@ -76,7 +76,7 @@ class MCPRegistryAdapter:
                 f"Registry lookup failed for '{registry_id}': {exc}"
             ) from exc
 
-    def _to_source_config(self, source_id: str, entry: dict) -> SourceConfig:
+    def _to_source_config(self, source_id: str, entry: dict[str, object]) -> SourceConfig:
         """Convert a registry API response entry into a concrete SourceConfig.
 
         Prefers ``url`` (streamable-http) over ``command`` (stdio).
@@ -86,14 +86,14 @@ class MCPRegistryAdapter:
         """
         url = entry.get("url")
         command = entry.get("command")
-        if url:
+        if isinstance(url, str) and url:
             return SourceConfig(
                 id=source_id,
                 type="mcp_server",
                 transport="streamable-http",
                 url=url,
             )
-        if command:
+        if isinstance(command, str) and command:
             return SourceConfig(
                 id=source_id,
                 type="mcp_server",
