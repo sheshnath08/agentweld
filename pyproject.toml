@@ -1,6 +1,6 @@
 [project]
 name = "agentweld"
-version = "0.1.0"
+version = "0.2.0"
 description = "Turn any MCP server into a curated, composable, A2A-ready agent."
 readme = "README.md"
 requires-python = ">=3.11"
