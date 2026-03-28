@@ -12,6 +12,7 @@ from agentweld.config.loader import load_config, resolve_config_path
 from agentweld.curation.engine import CurationEngine
 from agentweld.curation.enricher import run_enrich_pass
 from agentweld.generators.runner import run_generators
+from agentweld.generators.workspace import WorkspaceAgentEntry, WorkspaceComposeGenerator
 from agentweld.models.config import AgentweldConfig, SourceConfig
 from agentweld.models.tool import ToolDefinition
 from agentweld.sources.registry import get_adapter_for_source
@@ -38,8 +39,17 @@ def generate(
     enrich_first: bool = typer.Option(
         False, "--enrich", help="Run LLM enrichment pass before generating"
     ),
+    workspace: bool = typer.Option(
+        False,
+        "--workspace",
+        help="Generate workspace-level docker-compose.yaml by scanning ./agents/*/agentweld.yaml",
+    ),
 ) -> None:
     """Full pipeline: load config → introspect → curate → compose → generate artifacts."""
+
+    if workspace:
+        _run_workspace_generate()
+        return
 
     # 1. Load config
     try:
@@ -197,3 +207,54 @@ def _print_artifact_summary(artifacts: list[Path], output_dir: Path) -> None:
         except ValueError:
             rel = path
         console.print(f"  [muted]•[/] {rel}")
+
+
+def _run_workspace_generate() -> None:
+    """Scan ./agents/ and emit a workspace-level docker-compose.yaml."""
+    from collections import Counter
+
+    agents_dir = Path("./agents")
+    if not agents_dir.is_dir():
+        console.print("[yellow]No ./agents/ directory found. Nothing to generate.[/]")
+        raise typer.Exit(code=0)
+
+    entries: list[WorkspaceAgentEntry] = []
+    for yaml_path in sorted(agents_dir.glob("*/agentweld.yaml")):
+        dir_name = yaml_path.parent.name
+        try:
+            cfg = load_config(yaml_path)
+        except AgentweldError as e:
+            console.print(f"[yellow]Skipping {dir_name}: {e}[/]")
+            continue
+        if not cfg.generate.emit.deploy_config:
+            continue
+        port = cfg.generate.serve_port or 7777
+        slug = cfg.agent.name.lower().replace(" ", "-")
+        entries.append(
+            WorkspaceAgentEntry(name=cfg.agent.name, slug=slug, dir_name=dir_name, port=port)
+        )
+
+    if not entries:
+        console.print("[yellow]No agents with emit.deploy_config: true found in ./agents/.[/]")
+        raise typer.Exit(code=0)
+
+    # Warn on duplicate ports
+    port_counts = Counter(e.port for e in entries)
+    for port, count in port_counts.items():
+        if count > 1:
+            duplicates = [e.slug for e in entries if e.port == port]
+            console.print(
+                f"[yellow]Warning:[/] Port {port} is used by multiple agents: "
+                f"{', '.join(duplicates)}. Update serve_port in their agentweld.yaml files."
+            )
+
+    gen = WorkspaceComposeGenerator()
+    content = gen.generate(entries)
+    output_path = Path("docker-compose.yaml")
+    gen.write(content, output_path)
+
+    console.print(
+        f"\n[green]Generated workspace docker-compose.yaml with {len(entries)} service(s):[/]"
+    )
+    for entry in entries:
+        console.print(f"  [muted]•[/] {entry.slug} (port {entry.port})")

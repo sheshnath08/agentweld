@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — v0.3.0
 
 ### Added
+- **Deploy Config Generator (v0.3 Phase 3)** — `agentweld generate` now emits Docker deployment artifacts when `emit.deploy_config: true` in `agentweld.yaml`:
+  - `Dockerfile` — single-stage `nginx:alpine` image serving `agent_card.json` and `mcp.json` on the same two routes as `agentweld serve`. No credentials baked in.
+  - `docker-compose.yaml` — per-agent compose file, self-contained, runnable independently. Port derived from `serve_port`.
+  - `nginx.conf` — exact-match location blocks for `/.well-known/agent.json` and `/mcp.json`; 404 for all other paths.
+  - `env_file: .env` passthrough in compose — credentials are never written into the image.
+- **`agentweld generate --workspace`** — scans `./agents/*/agentweld.yaml` for configs with `emit.deploy_config: true` and generates a root-level `docker-compose.yaml` that brings up all agents with `docker compose up`. Port assignments come from each agent's `serve_port` — the same port used by `agentweld serve`, ensuring dev → production consistency. Duplicate-port detection warns when two agents share the same host port.
+- `emit.deploy_config: bool = False` — new field in the `generate.emit` block (opt-in, disabled by default).
+- `--only deploy_config` — regenerate only Docker artifacts without touching other outputs.
+
 - **`agentweld serve` (v0.3 Phase 2)** — Lightweight dev server that exposes two static routes over HTTP with no new runtime dependencies (stdlib `http.server`):
   - `GET /.well-known/agent.json` → serves `agent_card.json`
   - `GET /mcp.json` → serves `mcp.json`
