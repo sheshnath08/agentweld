@@ -5,6 +5,14 @@ All notable changes to agentweld are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — v0.3.2
+
+### Fixed
+- **Include filter silently ignored** — `tools.<source_id>.include/exclude` written directly under `tools:` (without the `filters:` sub-key) was silently discarded by Pydantic, causing all tools to pass through uncurated. `ToolsConfig` now accepts both the shorthand form (`tools.github.include`) and the canonical form (`tools.filters.github.include`). Both syntaxes are equivalent. This fixes `inspect --final`, `system_prompt.md`, and `mcp.json` all showing the full unfiltered tool list when the shorthand syntax was used.
+- **`mcp.json` always had `expose_tools: []`** — `ToolManifestGenerator` now receives the curated tool list and populates `expose_tools` per server entry with the original server-side tool names. MCP clients can use this field to restrict which tools are loaded from each upstream server.
+
+---
+
 ## [Unreleased] — v0.3.0
 
 ### Added

@@ -236,15 +236,20 @@ sources:
     url: "https://mcp.linear.app/sse"
 
 tools:
-  filters:
-    github:
-      # include and exclude are mutually exclusive — use one or the other
-      include:
-        - search_repositories
-        - create_issue
-        - list_pull_requests
-      # exclude:
-      #   - delete_repository
+  # Shorthand: tools.<source_id>.include/exclude (more concise, recommended)
+  github:
+    # include and exclude are mutually exclusive — use one or the other
+    include:
+      - search_repositories
+      - create_issue
+      - list_pull_requests
+    # exclude:
+    #   - delete_repository
+
+  # Canonical form (also accepted):
+  # filters:
+  #   github:
+  #     include: [search_repositories, create_issue, list_pull_requests]
 
   rename:
     "github::search_repositories": search_repos
