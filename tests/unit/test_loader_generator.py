@@ -193,6 +193,7 @@ class TestRunGeneratorsLoaders:
         assert not (tmp_path / "README.md").exists()
         assert (tmp_path / "loaders" / "langgraph_loader.py").exists()
         assert (tmp_path / "loaders" / "crewai_loader.py").exists()
+        assert (tmp_path / "loaders" / "adk_a2a_loader.py").exists()
 
     def test_loaders_emit_false_skips_loaders(self, sample_tool, tmp_path):
         config = _minimal_config(
@@ -211,7 +212,7 @@ class TestRunGeneratorsLoaders:
         )
         assert not (tmp_path / "loaders").exists()
 
-    def test_loaders_produces_two_files(self, sample_tool, sample_config, tmp_path):
+    def test_loaders_produces_three_files(self, sample_tool, sample_config, tmp_path):
         artifacts = run_generators(
             cfg=sample_config,
             tools=[sample_tool],
@@ -221,7 +222,7 @@ class TestRunGeneratorsLoaders:
             force=False,
         )
         loader_files = [a for a in artifacts if "loaders" in str(a)]
-        assert len(loader_files) == 2
+        assert len(loader_files) == 3
 
     def test_unknown_generator_still_raises(self, sample_tool, sample_config, tmp_path):
         with pytest.raises(GeneratorError, match="Unknown generator"):
@@ -233,3 +234,66 @@ class TestRunGeneratorsLoaders:
                 only=["foobar"],
                 force=False,
             )
+
+
+# ── ADK A2A loader ────────────────────────────────────────────────────────────
+
+
+class TestLoaderGeneratorADK:
+    def test_generate_adk_a2a_returns_string(self, sample_tool, sample_config):
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_adk_output_is_valid_python(self, sample_tool, sample_config):
+        import ast
+
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        ast.parse(result)
+
+    def test_adk_output_contains_agent_name(self, sample_tool, sample_config):
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        assert sample_config.agent.name in result
+
+    def test_adk_output_contains_get_tool_provider(self, sample_tool, sample_config):
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        assert "def get_tool_provider" in result
+
+    def test_adk_output_contains_agent_card_url(self, sample_tool, sample_config):
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        assert "AGENT_CARD_URL" in result
+        assert ".well-known/agent.json" in result
+
+    def test_adk_output_contains_runtime_import(self, sample_tool, sample_config):
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        assert "agentweld.loaders.adk" in result
+        assert "try:" in result
+
+    def test_adk_output_does_not_contain_expose_tools(self, sample_tool, sample_config):
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        assert "_EXPOSE_TOOLS" not in result
+
+    def test_adk_output_bakes_serve_port(self, sample_tool):
+        config = _minimal_config(generate=GenerateConfig(serve_port=8888))
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), config, "adk_a2a")
+        assert "localhost:8888" in result
+
+    def test_adk_output_defaults_port_7777_when_none(self, sample_tool, sample_config):
+        gen = LoaderGenerator()
+        result = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        assert "localhost:7777" in result
+
+    def test_write_adk_correct_path(self, sample_tool, sample_config, tmp_path):
+        gen = LoaderGenerator()
+        content = gen.generate(_make_tool_set([sample_tool]), sample_config, "adk_a2a")
+        written = gen.write(content, tmp_path, "adk_a2a")
+        assert written == tmp_path / "loaders" / "adk_a2a_loader.py"
+        assert written.exists()
