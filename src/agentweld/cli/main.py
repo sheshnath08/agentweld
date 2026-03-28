@@ -30,6 +30,7 @@ def main(
 ) -> None:
     pass
 
+
 # Import and register each command function directly on the root app
 from agentweld.cli.add import add  # noqa: E402
 from agentweld.cli.enrich import enrich  # noqa: E402
