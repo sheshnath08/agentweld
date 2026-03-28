@@ -1185,3 +1185,119 @@ class TestGenerateWithLoaders:
 
         assert result.exit_code == 0, result.output
         assert not (tmp_path / "agent" / "loaders").exists()
+
+
+# ── agentweld serve ───────────────────────────────────────────────────────────
+
+
+class TestServeCommand:
+    def test_serve_help(self) -> None:
+        result = runner.invoke(app, ["serve", "--help"])
+        assert result.exit_code == 0
+        assert "--port" in result.output
+        assert "--host" in result.output
+        assert "--agent-dir" in result.output
+
+    def test_serve_missing_config_and_no_agent_dir_exits_1(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            app,
+            ["serve", "--config", str(tmp_path / "missing.yaml")],
+        )
+        assert result.exit_code == 1
+        assert "not found" in result.output.lower()
+
+    def test_serve_missing_agent_dir_exits_1(self, tmp_path: Path) -> None:
+        """--agent-dir given but directory does not exist → exit 1."""
+        result = runner.invoke(
+            app,
+            ["serve", "--agent-dir", str(tmp_path / "nonexistent")],
+        )
+        assert result.exit_code == 1
+        assert "not found" in result.output.lower()
+
+    def test_serve_missing_output_dir_from_config_exits_1(self, tmp_path: Path) -> None:
+        """Config found but output_dir doesn't exist → exit 1."""
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path / "no-such-dir")
+
+        with patch("agentweld.cli.serve.load_config", return_value=cfg):
+            result = runner.invoke(
+                app,
+                ["serve", "--config", str(tmp_path / "agentweld.yaml")],
+            )
+
+        assert result.exit_code == 1
+        assert "not found" in result.output.lower()
+
+    def test_serve_uses_serve_port_from_config(self, tmp_path: Path) -> None:
+        """serve_port in config should be used as default port (verified via port-in-use error)."""
+        import errno as _errno
+
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path)
+        cfg.generate.serve_port = 19999  # unlikely to be in use
+
+        with (
+            patch("agentweld.cli.serve.load_config", return_value=cfg),
+            patch(
+                "agentweld.cli.serve.ThreadingHTTPServer",
+                side_effect=OSError(_errno.EADDRINUSE, "Address already in use"),
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["serve", "--config", str(tmp_path / "agentweld.yaml")],
+            )
+
+        assert result.exit_code == 1
+        assert "19999" in result.output
+
+    def test_serve_port_already_in_use_exits_1(self, tmp_path: Path) -> None:
+        import errno as _errno
+
+        with (
+            patch(
+                "agentweld.cli.serve.ThreadingHTTPServer",
+                side_effect=OSError(_errno.EADDRINUSE, "Address already in use"),
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["serve", "--agent-dir", str(tmp_path), "--port", "7777"],
+            )
+
+        assert result.exit_code == 1
+        assert "7777" in result.output
+        assert "already in use" in result.output.lower()
+
+    def test_serve_warns_about_missing_files(self, tmp_path: Path) -> None:
+        """Missing agent_card.json / mcp.json should warn, not fail."""
+        with (
+            patch(
+                "agentweld.cli.serve.ThreadingHTTPServer.__init__",
+                side_effect=KeyboardInterrupt,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["serve", "--agent-dir", str(tmp_path), "--port", "7777"],
+            )
+
+        # Should warn about missing files (not exit 1)
+        assert "Warning" in result.output or "warning" in result.output.lower()
+
+    def test_serve_keyboard_interrupt_exits_cleanly(self, tmp_path: Path) -> None:
+        """KeyboardInterrupt during serve_forever should exit cleanly (not exit 1)."""
+        mock_server = MagicMock()
+        mock_server.__enter__ = MagicMock(return_value=mock_server)
+        mock_server.__exit__ = MagicMock(return_value=False)
+        mock_server.serve_forever = MagicMock(side_effect=KeyboardInterrupt)
+
+        with patch("agentweld.cli.serve.ThreadingHTTPServer", return_value=mock_server):
+            result = runner.invoke(
+                app,
+                ["serve", "--agent-dir", str(tmp_path), "--port", "7777"],
+            )
+
+        assert result.exit_code == 0
+        assert "Stopped" in result.output

@@ -18,6 +18,7 @@ from agentweld.config.writer import (
 from agentweld.models.config import (
     AgentConfig,
     AgentweldConfig,
+    GenerateConfig,
     SourceConfig,
     ToolsConfig,
 )
@@ -343,3 +344,41 @@ class TestUpdateDescriptions:
         cfg = load_config(dest)
         assert "find_open_prs" in cfg.tools.descriptions
         assert cfg.tools.descriptions["new_enriched_tool"] == "A newly enriched tool description."
+
+
+# ── GenerateConfig.serve_port ─────────────────────────────────────────────────
+
+
+class TestGenerateConfigServePort:
+    def test_default_is_none(self) -> None:
+        cfg = GenerateConfig()
+        assert cfg.serve_port is None
+
+    def test_accepts_integer(self) -> None:
+        cfg = GenerateConfig(serve_port=8080)
+        assert cfg.serve_port == 8080
+
+    def test_parsed_from_yaml(self, tmp_path: Path) -> None:
+        yaml_text = textwrap.dedent("""\
+            agent:
+              name: test-agent
+            generate:
+              output_dir: ./out
+              serve_port: 9000
+        """)
+        p = tmp_path / "agentweld.yaml"
+        p.write_text(yaml_text)
+        cfg = load_config(p)
+        assert cfg.generate.serve_port == 9000
+
+    def test_omitted_from_yaml_gives_none(self, tmp_path: Path) -> None:
+        yaml_text = textwrap.dedent("""\
+            agent:
+              name: test-agent
+            generate:
+              output_dir: ./out
+        """)
+        p = tmp_path / "agentweld.yaml"
+        p.write_text(yaml_text)
+        cfg = load_config(p)
+        assert cfg.generate.serve_port is None

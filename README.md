@@ -68,6 +68,13 @@ Generated 6 artifact(s) in ./agent:
   • README.md
   • loaders/langgraph_loader.py
   • loaders/crewai_loader.py
+
+# 6. (Optional) Serve the agent locally for A2A discovery
+$ agentweld serve
+Serving ./agent on http://127.0.0.1:7777
+
+  GET http://127.0.0.1:7777/.well-known/agent.json
+  GET http://127.0.0.1:7777/mcp.json
 ```
 
 ## CLI Reference
@@ -165,6 +172,27 @@ Example output:
 Summary: 3 scanned, 2 below warn (0.6), 1 below block (0.4)
 ```
 
+### `agentweld serve`
+
+Serve `agent_card.json` and `mcp.json` over HTTP for local A2A discovery. Useful for testing A2A clients and framework integrations without Docker.
+
+```
+agentweld serve [OPTIONS]
+
+Options:
+  --agent-dir PATH    Agent output directory [default: output_dir from agentweld.yaml]
+  --port INT          Port to bind [default: serve_port from yaml, or 7777]
+  --host TEXT         Host to bind [default: 127.0.0.1]. Use 0.0.0.0 to expose on LAN.
+  -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
+```
+
+Two routes are served — nothing more:
+
+```
+GET /.well-known/agent.json  →  agent_card.json
+GET /mcp.json                →  mcp.json
+```
+
 ### `agentweld preview`
 
 Same as `generate` but writes to a temp directory and prints artifact contents. Nothing is written to your project.
@@ -242,6 +270,7 @@ a2a:
 
 generate:
   output_dir: ./agent
+  serve_port: 7777    # default port for `agentweld serve` (optional, defaults to 7777)
   emit:
     agent_card: true
     tool_manifest: true
@@ -306,6 +335,133 @@ pip install 'agentweld[loaders]'             # just the logic, bring your own fr
 ```
 
 > **Note:** Loaders are generated artifacts — do not edit them manually. Edit `agentweld.yaml` and regenerate.
+
+## Single-Agent vs. Multi-Agent Projects
+
+### Single agent
+
+Run `agentweld serve` from the project root. It reads `output_dir` and `serve_port` from `agentweld.yaml` automatically:
+
+```bash
+agentweld serve
+# Serving ./agent on http://127.0.0.1:7777
+```
+
+Set `serve_port` in `agentweld.yaml` to pin the port:
+
+```yaml
+generate:
+  output_dir: ./agent
+  serve_port: 7777
+```
+
+### Multiple agents
+
+Each agent needs its own port (the A2A spec fixes the path `/.well-known/agent.json` — it cannot be prefixed). Use `--agent-dir` to manage all agents from the project root without changing directories.
+
+**Option 1 — Separate terminals:**
+
+```bash
+agentweld serve --agent-dir ./agents/pr-review --port 7777
+agentweld serve --agent-dir ./agents/billing   --port 7778
+agentweld serve --agent-dir ./agents/knowledge --port 7779
+```
+
+**Option 2 — Procfile (recommended for teams):**
+
+```
+# Procfile
+pr_review: agentweld serve --agent-dir ./agents/pr-review --port 7777
+billing:   agentweld serve --agent-dir ./agents/billing   --port 7778
+knowledge: agentweld serve --agent-dir ./agents/knowledge --port 7779
+```
+
+```bash
+overmind start   # or: foreman start
+```
+
+## Using agentweld with Existing Projects
+
+### LangGraph
+
+**Mode A — Copy-in (no agentweld runtime dependency):**
+
+Copy `agent/loaders/langgraph_loader.py` into your project. Call `build_graph()` directly:
+
+```python
+from langgraph_loader import build_graph
+
+graph = build_graph()
+result = graph.invoke({"messages": [{"role": "user", "content": "List open PRs in myorg/myrepo"}]})
+```
+
+**Mode B — Runtime package (recommended for multi-agent projects):**
+
+Install agentweld with the LangGraph extra in your project's virtualenv. Import the runtime class directly, passing `agent_dir` explicitly. This picks up bug fixes and framework API updates via `pip install --upgrade agentweld` without regenerating the shim.
+
+```bash
+pip install "agentweld[loaders-langgraph]"
+```
+
+```python
+from agentweld.loaders.langgraph import AgentWeldLoader
+
+# Single agent
+loader = AgentWeldLoader(agent_dir="./agent")
+graph = loader.build_graph()
+
+# Multi-agent — pass agent_dir per agent
+pr_review = AgentWeldLoader(agent_dir="./agents/pr-review").build_graph()
+billing   = AgentWeldLoader(agent_dir="./agents/billing").build_graph()
+```
+
+### CrewAI
+
+**Mode A — Copy-in:**
+
+Copy `agent/loaders/crewai_loader.py` into your project:
+
+```python
+from crewai_loader import build_crew
+
+crew = build_crew()
+crew.kickoff(inputs={"task": "Review the latest PR in myorg/myrepo"})
+```
+
+**Mode B — Runtime package:**
+
+```bash
+pip install "agentweld[loaders-crewai]"
+```
+
+```python
+from agentweld.loaders.crewai import AgentWeldCrewLoader
+
+loader = AgentWeldCrewLoader(agent_dir="./agent")
+crew = loader.build_crew()
+
+# Multi-agent
+pr_review = AgentWeldCrewLoader(agent_dir="./agents/pr-review").build_crew()
+billing   = AgentWeldCrewLoader(agent_dir="./agents/billing").build_crew()
+```
+
+### A2A clients
+
+Run `agentweld serve` to expose the agent card. Any A2A-compliant client can discover the agent at `http://localhost:{serve_port}/.well-known/agent.json`:
+
+```bash
+agentweld serve --port 7777
+# GET http://localhost:7777/.well-known/agent.json  →  agent_card.json
+# GET http://localhost:7777/mcp.json                →  mcp.json
+```
+
+Configure `serve_port` in `agentweld.yaml` so the port is consistent between `agentweld serve` and any client configuration:
+
+```yaml
+generate:
+  output_dir: ./agent
+  serve_port: 7777
+```
 
 ## Plugin System
 

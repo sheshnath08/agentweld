@@ -129,6 +129,7 @@ class EmitConfig(BaseModel):
 
 class GenerateConfig(BaseModel):
     output_dir: str = "./agent"
+    serve_port: int | None = None
     emit: EmitConfig = Field(default_factory=EmitConfig)
 
 
