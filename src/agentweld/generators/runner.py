@@ -73,13 +73,15 @@ def run_generators(
 
     # agent_card
     if _should_run("agent_card", emit.agent_card):
-        card = AgentCardGenerator().generate(tool_set, cfg)
-        artifacts.append(AgentCardGenerator().write(card, output_dir))
+        ac_gen = AgentCardGenerator()
+        card = ac_gen.generate(tool_set, cfg)
+        artifacts.append(ac_gen.write(card, output_dir))
 
     # tool_manifest
     if _should_run("tool_manifest", emit.tool_manifest):
-        manifest = ToolManifestGenerator().generate(cfg)
-        artifacts.append(ToolManifestGenerator().write(manifest, output_dir))
+        tm_gen = ToolManifestGenerator()
+        manifest = tm_gen.generate(cfg, tool_set.tools)
+        artifacts.append(tm_gen.write(manifest, output_dir))
 
     # system_prompt
     if _should_run("system_prompt", emit.system_prompt):

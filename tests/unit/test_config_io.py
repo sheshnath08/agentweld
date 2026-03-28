@@ -346,6 +346,89 @@ class TestUpdateDescriptions:
         assert cfg.tools.descriptions["new_enriched_tool"] == "A newly enriched tool description."
 
 
+# ── Shorthand filter syntax ───────────────────────────────────────────────────
+
+
+SHORTHAND_FILTER_YAML = textwrap.dedent("""\
+    agent:
+      name: GitHub Triage Agent
+      description: Triages GitHub issues.
+    sources:
+      - id: github
+        type: mcp_server
+        transport: stdio
+        command: npx @modelcontextprotocol/server-github
+    tools:
+      github:
+        include:
+          - list_issues
+          - get_issue
+          - search_issues
+      rename:
+        "github::list_issues": find_open_issues
+""")
+
+
+class TestShorthandFilterSyntax:
+    def test_shorthand_include_parsed(self, tmp_path: Path) -> None:
+        """tools.<source_id>.include should be treated as tools.filters.<source_id>.include."""
+        (tmp_path / "agentweld.yaml").write_text(SHORTHAND_FILTER_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
+        assert "github" in cfg.tools.filters
+        assert cfg.tools.filters["github"].include == ["list_issues", "get_issue", "search_issues"]
+
+    def test_shorthand_rename_still_works(self, tmp_path: Path) -> None:
+        """rename keys should not be affected by the shorthand promotion."""
+        (tmp_path / "agentweld.yaml").write_text(SHORTHAND_FILTER_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
+        assert cfg.tools.rename == {"github::list_issues": "find_open_issues"}
+
+    def test_shorthand_filter_applied_by_curator(self, tmp_path: Path) -> None:
+        """End-to-end: shorthand filter in YAML must actually filter tools via RuleBasedCurator."""
+        from agentweld.curation.rules import RuleBasedCurator
+        from agentweld.models.tool import ToolDefinition
+
+        (tmp_path / "agentweld.yaml").write_text(SHORTHAND_FILTER_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
+
+        tools = [
+            ToolDefinition.from_mcp("github", "list_issues", "List issues.", {}),
+            ToolDefinition.from_mcp("github", "get_issue", "Get an issue.", {}),
+            ToolDefinition.from_mcp("github", "delete_repo", "Delete a repo.", {}),  # not in include
+        ]
+        curator = RuleBasedCurator(cfg)
+        result = curator.apply(tools)
+        names = [t.source_tool_name for t in result]
+        assert "list_issues" in names
+        assert "get_issue" in names
+        assert "delete_repo" not in names
+
+    def test_canonical_syntax_still_works(self, tmp_path: Path) -> None:
+        """The canonical tools.filters.<source_id> syntax must still be parsed correctly."""
+        (tmp_path / "agentweld.yaml").write_text(FULL_YAML)
+        cfg = load_config(tmp_path / "agentweld.yaml")
+        assert cfg.tools.filters["github"].include == ["list_pull_requests", "create_review"]
+
+    def test_shorthand_exclude_parsed(self, tmp_path: Path) -> None:
+        """tools.<source_id>.exclude should also be promoted."""
+        yaml_text = textwrap.dedent("""\
+            agent:
+              name: Test Agent
+            sources:
+              - id: github
+                type: mcp_server
+                transport: stdio
+                command: npx @modelcontextprotocol/server-github
+            tools:
+              github:
+                exclude:
+                  - delete_repo
+        """)
+        (tmp_path / "agentweld.yaml").write_text(yaml_text)
+        cfg = load_config(tmp_path / "agentweld.yaml")
+        assert cfg.tools.filters["github"].exclude == ["delete_repo"]
+
+
 # ── GenerateConfig.serve_port ─────────────────────────────────────────────────
 
 

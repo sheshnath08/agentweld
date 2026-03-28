@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -68,6 +68,39 @@ class ToolsConfig(BaseModel):
     rename: dict[str, str] = Field(default_factory=dict)
     # Description overrides: tool_name (post-rename) → curated description
     descriptions: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def promote_shorthand_filters(cls, data: Any) -> Any:
+        """Support shorthand syntax: tools.<source_id>.include as an alias for
+        tools.filters.<source_id>.include.
+
+        This allows users to write::
+
+            tools:
+              github:
+                include: [list_issues, get_issue]
+
+        instead of the canonical form::
+
+            tools:
+              filters:
+                github:
+                  include: [list_issues, get_issue]
+        """
+        if not isinstance(data, dict):
+            return data
+        known_keys = {"filters", "rename", "descriptions"}
+        clean: dict[str, Any] = {}
+        for k, v in data.items():
+            if k in known_keys:
+                clean[k] = v
+            elif isinstance(v, dict) and ("include" in v or "exclude" in v):
+                # Shorthand filter entry: tools.<source_id>: {include: [...]}
+                clean.setdefault("filters", {})[k] = v
+            else:
+                clean[k] = v
+        return clean
 
 
 # ── Quality ───────────────────────────────────────────────────────────────────

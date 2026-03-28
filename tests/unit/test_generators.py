@@ -295,3 +295,79 @@ class TestReadmeGenerator:
         gen = ReadmeGenerator()
         content = gen.generate(ComposedToolSet(tools=[]), sample_config)
         assert sample_config.agent.name in content
+
+
+# ── ToolManifestGenerator: expose_tools ──────────────────────────────────────
+
+class TestToolManifestGeneratorExposeTools:
+    def test_expose_tools_populated_for_stdio_source(self, sample_config):
+        """expose_tools must list source_tool_name for each curated tool from that source."""
+        tools = [
+            ToolDefinition.from_mcp("github", "list_issues", "List issues.", {}),
+            ToolDefinition.from_mcp("github", "get_issue", "Get an issue.", {}),
+        ]
+        gen = ToolManifestGenerator()
+        manifest = gen.generate(sample_config, tools)
+        entry = manifest.servers["github"]
+        assert set(entry.expose_tools) == {"list_issues", "get_issue"}
+
+    def test_expose_tools_empty_when_no_tools_passed(self, sample_config):
+        """Calling generate() without tools must leave expose_tools empty (backward compat)."""
+        gen = ToolManifestGenerator()
+        manifest = gen.generate(sample_config)
+        assert manifest.servers["github"].expose_tools == []
+
+    def test_expose_tools_uses_source_tool_name_not_renamed_name(self, sample_config):
+        """expose_tools must use the original server-side name, not the curated/renamed name."""
+        tool = ToolDefinition.from_mcp("github", "list_pull_requests", "List PRs.", {})
+        # Simulate a rename applied by the curator
+        renamed = tool.model_copy(update={"name": "find_open_prs"})
+        gen = ToolManifestGenerator()
+        manifest = gen.generate(sample_config, [renamed])
+        entry = manifest.servers["github"]
+        assert "list_pull_requests" in entry.expose_tools
+        assert "find_open_prs" not in entry.expose_tools
+
+    def test_expose_tools_filters_by_source_id(self):
+        """Tools from different sources must only appear under their own server entry."""
+        config = AgentweldConfig(
+            agent=AgentConfig(name="Multi Agent"),
+            sources=[
+                SourceConfig(id="github", type="mcp_server", transport="stdio",
+                             command="npx @modelcontextprotocol/server-github"),
+                SourceConfig(id="linear", type="mcp_server", transport="stdio",
+                             command="npx @linear/mcp"),
+            ],
+        )
+        tools = [
+            ToolDefinition.from_mcp("github", "list_issues", "List issues.", {}),
+            ToolDefinition.from_mcp("linear", "list_tickets", "List tickets.", {}),
+        ]
+        gen = ToolManifestGenerator()
+        manifest = gen.generate(config, tools)
+        assert manifest.servers["github"].expose_tools == ["list_issues"]
+        assert manifest.servers["linear"].expose_tools == ["list_tickets"]
+
+    def test_expose_tools_populated_for_http_source(self):
+        """expose_tools must be populated for HTTP sources too."""
+        config = AgentweldConfig(
+            agent=AgentConfig(name="HTTP Agent"),
+            sources=[
+                SourceConfig(id="remote", type="mcp_server", transport="streamable-http",
+                             url="https://example.com/mcp"),
+            ],
+        )
+        tools = [ToolDefinition.from_mcp("remote", "call_api", "Call the API.", {})]
+        gen = ToolManifestGenerator()
+        manifest = gen.generate(config, tools)
+        assert manifest.servers["remote"].expose_tools == ["call_api"]
+
+    def test_expose_tools_written_to_mcp_json(self, sample_config, tmp_path):
+        """expose_tools must appear in the serialised mcp.json output."""
+        import json
+        tools = [ToolDefinition.from_mcp("github", "list_issues", "List issues.", {})]
+        gen = ToolManifestGenerator()
+        manifest = gen.generate(sample_config, tools)
+        written = gen.write(manifest, tmp_path)
+        data = json.loads(written.read_text())
+        assert data["servers"]["github"]["expose_tools"] == ["list_issues"]
