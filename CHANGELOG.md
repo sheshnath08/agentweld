@@ -5,6 +5,21 @@ All notable changes to agentweld are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — v0.3.0
+
+### Added
+- **Framework Loaders (v0.3 Phase 1)** — `agentweld generate` now produces a `loaders/` directory alongside existing artifacts, containing two ready-to-use framework shims:
+  - `loaders/langgraph_loader.py` — wires curated tools into a LangGraph agent via `build_graph()`
+  - `loaders/crewai_loader.py` — wires curated tools into a CrewAI crew via `build_crew()`
+- Each shim is **standalone by default** (no agentweld runtime dependency) but transparently delegates to `AgentWeldLoader` / `AgentWeldCrewLoader` if agentweld is installed in the runtime environment.
+- `emit.loaders: bool = True` added to `agentweld.yaml` schema — set to `false` to skip loader generation.
+- `--only loaders` support — regenerate only the loader shims without touching other artifacts.
+- New optional extras: `agentweld[loaders-langgraph]`, `agentweld[loaders-crewai]`, `agentweld[loaders]` (logic only).
+- `agentweld.loaders.langgraph.AgentWeldLoader` — runtime helper class for LangGraph projects.
+- `agentweld.loaders.crewai.AgentWeldCrewLoader` — runtime helper class for CrewAI projects.
+
+---
+
 ## [Unreleased] — v0.2.0
 
 ### Added

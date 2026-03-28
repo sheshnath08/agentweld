@@ -44,6 +44,9 @@ dev = [
 anthropic = ["anthropic>=0.28"]
 openai    = ["openai>=1.30"]
 enrich    = ["anthropic>=0.28"]
+loaders           = []
+loaders-langgraph = ["langchain-mcp-adapters>=0.1", "langgraph>=0.2"]
+loaders-crewai    = ["crewai>=1.10", "crewai-tools[mcp]>=0.1"]
 
 [project.urls]
 Homepage = "https://github.com/sheshnath08/agentweld"
@@ -88,6 +91,15 @@ ignore = [
 python_version = "3.11"
 strict = true
 packages = ["agentweld"]
+
+[[tool.mypy.overrides]]
+module = [
+    "agentweld.loaders.langgraph",
+    "agentweld.loaders.crewai",
+]
+# Optional framework deps (langgraph, crewai, etc.) are not installed in the
+# base environment. Ignore all import and type errors in these modules.
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
