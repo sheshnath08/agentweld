@@ -20,7 +20,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased] — v0.2.0
+## [0.2.1] — 2026-03-28
+
+### Fixed
+- `inspect` summary: tools were showing `N/A` for average quality score — now correctly computed and displayed.
+
+---
+
+## [0.2.0] — 2026-03-27
 
 ### Added
 - `generate` now prints a warning table for tools in the quality **warn zone** (`block_below ≤ score < warn_below`), even when `--force` is passed.
@@ -79,4 +86,6 @@ Initial public release of agentweld.
 - Quality gate in the `generate` pipeline (configurable `quality.block_below` threshold).
 - Conflict resolution strategies: `prefix`, `explicit`, `error`.
 
+[0.2.1]: https://github.com/sheshnath08/agentweld/releases/tag/v0.2.1
+[0.2.0]: https://github.com/sheshnath08/agentweld/releases/tag/v0.2.0
 [0.1.0]: https://github.com/sheshnath08/agentweld/releases/tag/v0.1.0

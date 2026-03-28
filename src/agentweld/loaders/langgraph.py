@@ -112,7 +112,4 @@ class AgentWeldLoader:
             return ChatOpenAI(model="gpt-4o")
         except ImportError:
             pass
-        raise ImportError(
-            "No LLM provider found. "
-            "Install langchain-anthropic or langchain-openai."
-        )
+        raise ImportError("No LLM provider found. Install langchain-anthropic or langchain-openai.")

@@ -50,8 +50,7 @@ class AgentWeldCrewLoader:
             )
         except ImportError as exc:
             raise ImportError(
-                "Install crewai with MCP support: "
-                "pip install 'agentweld[loaders-crewai]'"
+                "Install crewai with MCP support: pip install 'agentweld[loaders-crewai]'"
             ) from exc
 
         manifest = self._load_manifest()

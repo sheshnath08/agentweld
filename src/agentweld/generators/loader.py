@@ -63,8 +63,7 @@ class LoaderGenerator:
         """
         if framework not in self.FRAMEWORKS:
             raise GeneratorError(
-                f"Unknown loader framework '{framework}'. "
-                f"Supported: {', '.join(self.FRAMEWORKS)}"
+                f"Unknown loader framework '{framework}'. Supported: {', '.join(self.FRAMEWORKS)}"
             )
         try:
             tpl = self._env.get_template(f"{framework}_loader.py.j2")
@@ -83,9 +82,7 @@ class LoaderGenerator:
         except GeneratorError:
             raise
         except Exception as exc:
-            raise GeneratorError(
-                f"Failed to render {framework} loader: {exc}"
-            ) from exc
+            raise GeneratorError(f"Failed to render {framework} loader: {exc}") from exc
 
     def write(self, content: str, output_dir: Path, framework: str) -> Path:
         """Write the shim to ``output_dir/loaders/{framework}_loader.py``.
