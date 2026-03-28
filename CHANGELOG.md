@@ -27,6 +27,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - `agentweld.loaders.langgraph.AgentWeldLoader` — runtime helper class for LangGraph projects.
 - `agentweld.loaders.crewai.AgentWeldCrewLoader` — runtime helper class for CrewAI projects.
 
+- **Google ADK A2A loader (v0.3 Phase 2)** — `agentweld generate` now also produces `loaders/adk_a2a_loader.py`, connecting the curated agent to a Google ADK orchestrator via the A2A protocol:
+  - Unlike LangGraph/CrewAI, the ADK loader does not consume `mcp.json` directly — it hits `agent_card.json` over HTTP and delegates tool routing to the running `agentweld serve` process.
+  - `get_tool_provider(agent_card_url)` returns an `A2AToolProvider` ready to pass to `google.adk.agents.Agent`.
+  - `AGENT_CARD_URL` is baked in at generate time from `serve_port` in `agentweld.yaml`.
+  - Standalone by default; transparently delegates to `agentweld.loaders.adk` runtime helper when `agentweld[loaders-adk]` is installed.
+- New optional extra: `agentweld[loaders-adk]` — installs `google-adk`.
+- `agentweld.loaders.adk.get_tool_provider()` — runtime helper function for multi-agent ADK projects.
+
 ---
 
 ## [0.2.1] — 2026-03-28

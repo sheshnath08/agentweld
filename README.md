@@ -68,6 +68,7 @@ Generated 6 artifact(s) in ./agent:
   • README.md
   • loaders/langgraph_loader.py
   • loaders/crewai_loader.py
+  • loaders/adk_a2a_loader.py
 
 # 6. (Optional) Serve the agent locally for A2A discovery
 $ agentweld serve
@@ -289,10 +290,11 @@ generate:
 | `README.md` | `<output_dir>/README.md` | Quickstart for users of the generated agent |
 | `loaders/langgraph_loader.py` | `<output_dir>/loaders/` | Ready-to-use LangGraph agent loader |
 | `loaders/crewai_loader.py` | `<output_dir>/loaders/` | Ready-to-use CrewAI crew loader |
+| `loaders/adk_a2a_loader.py` | `<output_dir>/loaders/` | Ready-to-use Google ADK A2A provider |
 
 ## Framework Loaders
 
-`agentweld generate` produces two framework loader files that wire the curated tool set into a running agent with zero manual glue code. Each loader enforces `expose_tools` filtering (the most common gap when wiring MCP servers manually), translates `mcp.json` into the framework's native format, and loads the generated system prompt.
+`agentweld generate` produces three framework loader files. LangGraph and CrewAI loaders wire the curated tool set directly into the framework using `mcp.json`. The Google ADK loader takes a different path — it connects to the agentweld agent via the A2A protocol, treating the entire agent as a callable sub-agent in an ADK orchestrator graph.
 
 ### LangGraph
 
@@ -324,13 +326,58 @@ crew = build_crew()
 crew.kickoff(inputs={"task": "Review the latest PR in myorg/myrepo"})
 ```
 
+### Google ADK (A2A)
+
+The ADK loader connects to the agentweld agent over HTTP via the A2A protocol. The agent must be running (`agentweld serve`) before calling `get_tool_provider()`.
+
+```bash
+# Start the agent (required before using the ADK loader)
+agentweld serve --port 7777
+
+# Install google-adk in your project
+pip install google-adk
+# or install the runtime extra:
+pip install 'agentweld[loaders-adk]'
+```
+
+**Single-agent project** — use the generated shim directly:
+
+```python
+# Copy agent/loaders/adk_a2a_loader.py into your project, then:
+from adk_a2a_loader import get_tool_provider
+from google.adk.agents import Agent
+
+root_agent = Agent(
+    name="orchestrator",
+    tools=[get_tool_provider()],
+)
+```
+
+**Multi-agent project** — import the runtime helper and pass URLs explicitly:
+
+```python
+from agentweld.loaders.adk import get_tool_provider
+from google.adk.agents import Agent
+
+pr_provider      = get_tool_provider(agent_card_url="http://localhost:7777/.well-known/agent.json")
+billing_provider = get_tool_provider(agent_card_url="http://localhost:7778/.well-known/agent.json")
+
+root_agent = Agent(
+    name="orchestrator",
+    tools=[pr_provider, billing_provider],
+)
+```
+
+ADK treats each `A2AToolProvider` as a callable sub-agent. The orchestrator routes tasks to whichever agent's skills match — driven by the skill descriptions in each `agent_card.json`.
+
 ### Standalone vs. runtime mode
 
-Loaders are **standalone by default** — the generated file has no runtime dependency on agentweld and works by copying it into any project. For multi-agent projects, install the matching extra and the loader transparently delegates to the runtime helper class, which picks up bug fixes and framework API updates via `pip install --upgrade agentweld`.
+Loaders are **standalone by default** — the generated file has no runtime dependency on agentweld and works by copying it into any project. For multi-agent projects, install the matching extra and the loader transparently delegates to the runtime helper, which picks up bug fixes and framework API updates via `pip install --upgrade agentweld`.
 
 ```bash
 pip install 'agentweld[loaders-langgraph]'   # LangGraph projects
 pip install 'agentweld[loaders-crewai]'      # CrewAI projects
+pip install 'agentweld[loaders-adk]'         # Google ADK projects
 pip install 'agentweld[loaders]'             # just the logic, bring your own framework installs
 ```
 
@@ -443,6 +490,47 @@ crew = loader.build_crew()
 # Multi-agent
 pr_review = AgentWeldCrewLoader(agent_dir="./agents/pr-review").build_crew()
 billing   = AgentWeldCrewLoader(agent_dir="./agents/billing").build_crew()
+```
+
+### Google ADK
+
+The ADK loader uses the A2A protocol — no local file I/O. The agent must be served before calling `get_tool_provider()`.
+
+**Mode A — Copy-in (no agentweld runtime dependency):**
+
+```bash
+# Start the agent server first
+agentweld serve --port 7777
+```
+
+```python
+# Copy agent/loaders/adk_a2a_loader.py into your project, then:
+from adk_a2a_loader import get_tool_provider
+from google.adk.agents import Agent
+
+root_agent = Agent(name="orchestrator", tools=[get_tool_provider()])
+```
+
+**Mode B — Runtime package (recommended for multi-agent projects):**
+
+```bash
+pip install "agentweld[loaders-adk]"
+```
+
+```python
+from agentweld.loaders.adk import get_tool_provider
+from google.adk.agents import Agent
+
+# Single agent
+root_agent = Agent(
+    name="orchestrator",
+    tools=[get_tool_provider(agent_card_url="http://localhost:7777/.well-known/agent.json")],
+)
+
+# Multi-agent — each agent has its own serve URL
+pr_provider      = get_tool_provider(agent_card_url="http://localhost:7777/.well-known/agent.json")
+billing_provider = get_tool_provider(agent_card_url="http://localhost:7778/.well-known/agent.json")
+root_agent = Agent(name="orchestrator", tools=[pr_provider, billing_provider])
 ```
 
 ### A2A clients

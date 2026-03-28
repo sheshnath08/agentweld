@@ -3,4 +3,5 @@
 Install extras to use:
   pip install 'agentweld[loaders-langgraph]'
   pip install 'agentweld[loaders-crewai]'
+  pip install 'agentweld[loaders-adk]'
 """

@@ -21,16 +21,16 @@ class LoaderGenerator:
 
     Produces one shim per framework:
 
-    - ``loaders/langgraph_loader.py`` — wires tools into a LangGraph agent
-    - ``loaders/crewai_loader.py``    — wires tools into a CrewAI crew
+    - ``loaders/langgraph_loader.py``  — wires tools into a LangGraph agent
+    - ``loaders/crewai_loader.py``     — wires tools into a CrewAI crew
+    - ``loaders/adk_a2a_loader.py``   — connects to an ADK orchestrator via A2A
 
     Each generated file is fully self-contained (no agentweld runtime
     dependency), but will transparently delegate to the runtime helper classes
-    (``AgentWeldLoader`` / ``AgentWeldCrewLoader``) if the matching extras are
-    installed.
+    if the matching extras are installed.
     """
 
-    FRAMEWORKS: ClassVar[tuple[str, ...]] = ("langgraph", "crewai")
+    FRAMEWORKS: ClassVar[tuple[str, ...]] = ("langgraph", "crewai", "adk_a2a")
 
     def __init__(self) -> None:
         self._env = Environment(
@@ -78,6 +78,7 @@ class LoaderGenerator:
                 tool_names=[t.name for t in tool_set.tools],
                 agentweld_version=aw_version,
                 generated_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                serve_port=config.generate.serve_port or 7777,
             )
         except GeneratorError:
             raise
