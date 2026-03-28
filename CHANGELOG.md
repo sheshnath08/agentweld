@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — v0.3.0
 
 ### Added
+- **`agentweld serve` (v0.3 Phase 2)** — Lightweight dev server that exposes two static routes over HTTP with no new runtime dependencies (stdlib `http.server`):
+  - `GET /.well-known/agent.json` → serves `agent_card.json`
+  - `GET /mcp.json` → serves `mcp.json`
+  - `--agent-dir PATH` — explicit agent directory (for multi-agent projects, avoids `cd`)
+  - `--port INT` — override port (default: `serve_port` from `agentweld.yaml`, fallback 7777)
+  - `--host TEXT` — bind host (default `127.0.0.1`; use `0.0.0.0` to expose on LAN)
+  - `-c/--config PATH` — explicit config path
+- `serve_port: int | None` added to the `generate:` block in `agentweld.yaml` — sets the canonical local dev port used by both `agentweld serve` and future ADK loader generation.
+
 - **Framework Loaders (v0.3 Phase 1)** — `agentweld generate` now produces a `loaders/` directory alongside existing artifacts, containing two ready-to-use framework shims:
   - `loaders/langgraph_loader.py` — wires curated tools into a LangGraph agent via `build_graph()`
   - `loaders/crewai_loader.py` — wires curated tools into a CrewAI crew via `build_crew()`
