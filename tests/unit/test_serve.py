@@ -32,6 +32,14 @@ def _get(url: str) -> tuple[int, bytes]:
         return e.code, e.read()
 
 
+@pytest.fixture()
+def live_server(tmp_path: Path) -> tuple[int, Path]:  # type: ignore[return]
+    """Start a server against tmp_path, yield (port, agent_dir), shut down after test."""
+    server, port = _start_server(tmp_path)
+    yield port, tmp_path
+    server.shutdown()
+
+
 class TestMakeHandler:
     def test_injects_agent_dir(self, tmp_path: Path) -> None:
         handler_cls = _make_handler(tmp_path)
@@ -48,77 +56,54 @@ class TestMakeHandler:
 
 
 class TestServeHandler:
-    def test_agent_card_route_200(self, tmp_path: Path) -> None:
-        wk = tmp_path / ".well-known"
+    def test_agent_card_route_200(self, live_server: tuple[int, Path]) -> None:
+        port, agent_dir = live_server
+        wk = agent_dir / ".well-known"
         wk.mkdir()
         card = {"name": "Test Agent"}
         (wk / "agent.json").write_text(json.dumps(card))
 
-        server, port = _start_server(tmp_path)
-        try:
-            status, body = _get(f"http://127.0.0.1:{port}/.well-known/agent.json")
-            assert status == 200
-            assert json.loads(body) == card
-        finally:
-            server.shutdown()
+        status, body = _get(f"http://127.0.0.1:{port}/.well-known/agent.json")
+        assert status == 200
+        assert json.loads(body) == card
 
-    def test_mcp_json_route_200(self, tmp_path: Path) -> None:
+    def test_mcp_json_route_200(self, live_server: tuple[int, Path]) -> None:
+        port, agent_dir = live_server
         manifest = {"servers": {}}
-        (tmp_path / "mcp.json").write_text(json.dumps(manifest))
+        (agent_dir / "mcp.json").write_text(json.dumps(manifest))
 
-        server, port = _start_server(tmp_path)
-        try:
-            status, body = _get(f"http://127.0.0.1:{port}/mcp.json")
-            assert status == 200
-            assert json.loads(body) == manifest
-        finally:
-            server.shutdown()
+        status, body = _get(f"http://127.0.0.1:{port}/mcp.json")
+        assert status == 200
+        assert json.loads(body) == manifest
 
-    def test_unknown_route_returns_404(self, tmp_path: Path) -> None:
-        server, port = _start_server(tmp_path)
-        try:
-            status, _ = _get(f"http://127.0.0.1:{port}/unknown")
-            assert status == 404
-        finally:
-            server.shutdown()
+    def test_unknown_route_returns_404(self, live_server: tuple[int, Path]) -> None:
+        port, _ = live_server
+        status, _ = _get(f"http://127.0.0.1:{port}/unknown")
+        assert status == 404
 
-    def test_missing_agent_card_returns_404(self, tmp_path: Path) -> None:
-        # Route exists in _ROUTES but file not present in agent_dir
-        server, port = _start_server(tmp_path)
-        try:
-            status, body = _get(f"http://127.0.0.1:{port}/.well-known/agent.json")
-            assert status == 404
-            assert b"not found" in body.lower()
-        finally:
-            server.shutdown()
+    def test_missing_agent_card_returns_404(self, live_server: tuple[int, Path]) -> None:
+        port, _ = live_server
+        status, body = _get(f"http://127.0.0.1:{port}/.well-known/agent.json")
+        assert status == 404
+        assert b"not found" in body.lower()
 
-    def test_missing_mcp_json_returns_404(self, tmp_path: Path) -> None:
-        server, port = _start_server(tmp_path)
-        try:
-            status, _ = _get(f"http://127.0.0.1:{port}/mcp.json")
-            assert status == 404
-        finally:
-            server.shutdown()
+    def test_missing_mcp_json_returns_404(self, live_server: tuple[int, Path]) -> None:
+        port, _ = live_server
+        status, _ = _get(f"http://127.0.0.1:{port}/mcp.json")
+        assert status == 404
 
-    def test_query_string_ignored(self, tmp_path: Path) -> None:
+    def test_query_string_ignored(self, live_server: tuple[int, Path]) -> None:
         """Query params should not affect route matching."""
-        manifest = {"servers": {}}
-        (tmp_path / "mcp.json").write_text(json.dumps(manifest))
+        port, agent_dir = live_server
+        (agent_dir / "mcp.json").write_text("{}")
 
-        server, port = _start_server(tmp_path)
-        try:
-            status, _ = _get(f"http://127.0.0.1:{port}/mcp.json?v=1")
-            assert status == 200
-        finally:
-            server.shutdown()
+        status, _ = _get(f"http://127.0.0.1:{port}/mcp.json?v=1")
+        assert status == 200
 
-    def test_content_type_is_json(self, tmp_path: Path) -> None:
-        (tmp_path / "mcp.json").write_text("{}")
+    def test_content_type_is_json(self, live_server: tuple[int, Path]) -> None:
+        port, agent_dir = live_server
+        (agent_dir / "mcp.json").write_text("{}")
 
-        server, port = _start_server(tmp_path)
-        try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{port}/mcp.json") as resp:
-                ct = resp.headers.get("Content-Type", "")
-            assert "application/json" in ct
-        finally:
-            server.shutdown()
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/mcp.json") as resp:
+            ct = resp.headers.get("Content-Type", "")
+        assert "application/json" in ct

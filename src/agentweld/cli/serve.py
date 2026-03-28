@@ -36,10 +36,10 @@ class _AgentHandler(BaseHTTPRequestHandler):
             self._send(404, b"Not found")
             return
         file_path = self.agent_dir / rel
-        if not file_path.exists():
+        try:
+            self._send(200, file_path.read_bytes(), content_type="application/json")
+        except FileNotFoundError:
             self._send(404, f"File not found: {rel}".encode())
-            return
-        self._send(200, file_path.read_bytes(), content_type="application/json")
 
     def _send(
         self,
@@ -99,9 +99,6 @@ def serve(
 
     Run agentweld generate first to produce the agent directory.
     """
-    resolved_dir: Path
-    resolved_port: int
-
     if agent_dir is not None:
         resolved_dir = agent_dir
         resolved_port = port if port is not None else _DEFAULT_PORT
@@ -121,7 +118,7 @@ def serve(
 
     if not resolved_dir.exists():
         console.print(f"[red]Agent directory not found:[/] {resolved_dir}")
-        console.print("[dim]Run [bold]agentweld generate[/] first.[/dim]")
+        console.print("[dim]Run [bold]agentweld generate[/] first.[/]")
         raise typer.Exit(code=1)
 
     # Warn (but don't fail) if expected files are missing
