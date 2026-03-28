@@ -65,9 +65,9 @@ class DeployConfigGenerator:
 
             return {
                 "Dockerfile": self._env.get_template("Dockerfile.j2").render(**ctx),
-                "docker-compose.yaml": self._env.get_template(
-                    "docker-compose.yaml.j2"
-                ).render(**ctx),
+                "docker-compose.yaml": self._env.get_template("docker-compose.yaml.j2").render(
+                    **ctx
+                ),
                 "nginx.conf": self._env.get_template("nginx.conf.j2").render(**ctx),
             }
         except GeneratorError:
