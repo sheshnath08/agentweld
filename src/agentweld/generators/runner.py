@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agentweld.generators.agent_card import AgentCardGenerator
+from agentweld.generators.deploy_config import DeployConfigGenerator
 from agentweld.generators.loader import LoaderGenerator
 from agentweld.generators.readme import ReadmeGenerator
 from agentweld.generators.system_prompt import SystemPromptGenerator
@@ -14,7 +15,14 @@ from agentweld.models.config import AgentweldConfig
 from agentweld.models.tool import ToolDefinition
 from agentweld.utils.errors import GeneratorError
 
-_KNOWN_GENERATORS = {"agent_card", "tool_manifest", "system_prompt", "readme", "loaders"}
+_KNOWN_GENERATORS = {
+    "agent_card",
+    "tool_manifest",
+    "system_prompt",
+    "readme",
+    "loaders",
+    "deploy_config",
+}
 
 
 def run_generators(
@@ -91,5 +99,11 @@ def run_generators(
         for framework in LoaderGenerator.FRAMEWORKS:
             ldr_content = ldr_gen.generate(tool_set, cfg, framework)
             artifacts.append(ldr_gen.write(ldr_content, output_dir, framework))
+
+    # deploy_config
+    if _should_run("deploy_config", emit.deploy_config):
+        dc_gen = DeployConfigGenerator()
+        dc_content = dc_gen.generate(cfg)
+        artifacts.extend(dc_gen.write(dc_content, output_dir))
 
     return sorted(artifacts)
