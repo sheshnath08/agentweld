@@ -1105,3 +1105,83 @@ class TestEnrichCommand:
 
         assert result.exit_code == 1
         assert "Enrichment failed" in result.output
+
+
+# ── generate with loaders ─────────────────────────────────────────────────────
+
+
+class TestGenerateWithLoaders:
+    def test_generate_default_includes_loaders(self, tmp_path, github_tools):
+        """Default generate should write loaders/ directory."""
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path / "agent")
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["generate", "--force"])
+
+        assert result.exit_code == 0, result.output
+        agent_dir = tmp_path / "agent"
+        assert (agent_dir / "loaders" / "langgraph_loader.py").exists()
+        assert (agent_dir / "loaders" / "crewai_loader.py").exists()
+
+    def test_generate_with_only_loaders(self, tmp_path, github_tools):
+        """--only loaders should produce only loaders/ and skip other artifacts."""
+        cfg = _make_config("github")
+        cfg.generate.output_dir = str(tmp_path / "agent")
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["generate", "--force", "--only", "loaders"])
+
+        assert result.exit_code == 0, result.output
+        agent_dir = tmp_path / "agent"
+        assert (agent_dir / "loaders" / "langgraph_loader.py").exists()
+        assert (agent_dir / "loaders" / "crewai_loader.py").exists()
+        # Other artifacts should NOT be present
+        assert not (agent_dir / "mcp.json").exists()
+        assert not (agent_dir / "README.md").exists()
+
+    def test_generate_emit_loaders_false(self, tmp_path, github_tools):
+        """emit.loaders: false in config should produce no loaders/ directory."""
+        from agentweld.models.config import EmitConfig, GenerateConfig
+
+        cfg = _make_config("github")
+        cfg.generate = GenerateConfig(
+            output_dir=str(tmp_path / "agent"),
+            emit=EmitConfig(loaders=False),
+        )
+
+        mock_adapter = MagicMock()
+        mock_adapter.introspect = AsyncMock(return_value=github_tools)
+
+        with (
+            patch(
+                "agentweld.cli.generate.resolve_config_path",
+                return_value=Path("/fake/agentweld.yaml"),
+            ),
+            patch("agentweld.cli.generate.load_config", return_value=cfg),
+            patch("agentweld.cli.generate.get_adapter_for_source", return_value=mock_adapter),
+        ):
+            result = runner.invoke(app, ["generate", "--force"])
+
+        assert result.exit_code == 0, result.output
+        assert not (tmp_path / "agent" / "loaders").exists()

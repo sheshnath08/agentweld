@@ -22,7 +22,7 @@ CURATION ENGINE  (quality scanner → rule-based curator → LLM enrichment)
   ↓
 COMPOSITION LAYER  (namespace merge, conflict resolution)
   ↓
-GENERATORS  →  agent_card.json  /  mcp.json  /  system_prompt.md  /  README.md
+GENERATORS  →  agent_card.json  /  mcp.json  /  system_prompt.md  /  README.md  /  loaders/
 ```
 
 ## Quick Start
@@ -61,11 +61,13 @@ $ agentweld inspect
 
 # 5. Generate artifacts
 $ agentweld generate
-Generated 4 artifact(s) in ./agent:
+Generated 6 artifact(s) in ./agent:
   • agent_card.json
   • mcp.json
   • system_prompt.md
   • README.md
+  • loaders/langgraph_loader.py
+  • loaders/crewai_loader.py
 ```
 
 ## CLI Reference
@@ -130,7 +132,7 @@ Options:
   --force             Overwrite existing artifacts and bypass the quality block gate
                       (warn-zone warnings are always shown)
   --only TEXT         Only generate specific artifacts (repeatable):
-                      agent_card | tool_manifest | system_prompt | readme
+                      agent_card | tool_manifest | system_prompt | readme | loaders
   --enrich            Run an LLM enrichment pass on discovered tools before
                       generating. Writes improved descriptions back to
                       agentweld.yaml, then reloads config. Requires
@@ -244,17 +246,66 @@ generate:
     agent_card: true
     tool_manifest: true
     system_prompt: true
-    readme: true
+    loaders: true      # generates loaders/langgraph_loader.py + loaders/crewai_loader.py
+    # set to false to skip loader generation
 ```
 
 ## Generated Artifacts
 
 | Artifact | Path | Purpose |
 |---|---|---|
-| `agent_card.json` | `<output_dir>/agent_card.json` | A2A Agent Card, suitable for hosting at `/.well-known/agent.json` |
+| `agent_card.json` | `<output_dir>/.well-known/agent.json` | A2A Agent Card, suitable for hosting at `/.well-known/agent.json` |
 | `mcp.json` | `<output_dir>/mcp.json` | Tool manifest for MCP clients |
 | `system_prompt.md` | `<output_dir>/system_prompt.md` | LLM system prompt describing the agent and its tools |
 | `README.md` | `<output_dir>/README.md` | Quickstart for users of the generated agent |
+| `loaders/langgraph_loader.py` | `<output_dir>/loaders/` | Ready-to-use LangGraph agent loader |
+| `loaders/crewai_loader.py` | `<output_dir>/loaders/` | Ready-to-use CrewAI crew loader |
+
+## Framework Loaders
+
+`agentweld generate` produces two framework loader files that wire the curated tool set into a running agent with zero manual glue code. Each loader enforces `expose_tools` filtering (the most common gap when wiring MCP servers manually), translates `mcp.json` into the framework's native format, and loads the generated system prompt.
+
+### LangGraph
+
+```bash
+pip install agentweld
+# optionally add the runtime helper for multi-agent projects:
+pip install 'agentweld[loaders-langgraph]'
+```
+
+```python
+# Copy agent/loaders/langgraph_loader.py into your project, then:
+from langgraph_loader import build_graph
+
+graph = build_graph()
+result = graph.invoke({"messages": [{"role": "user", "content": "List open PRs in myorg/myrepo"}]})
+```
+
+### CrewAI
+
+```bash
+pip install agentweld
+pip install 'agentweld[loaders-crewai]'
+```
+
+```python
+from crewai_loader import build_crew
+
+crew = build_crew()
+crew.kickoff(inputs={"task": "Review the latest PR in myorg/myrepo"})
+```
+
+### Standalone vs. runtime mode
+
+Loaders are **standalone by default** — the generated file has no runtime dependency on agentweld and works by copying it into any project. For multi-agent projects, install the matching extra and the loader transparently delegates to the runtime helper class, which picks up bug fixes and framework API updates via `pip install --upgrade agentweld`.
+
+```bash
+pip install 'agentweld[loaders-langgraph]'   # LangGraph projects
+pip install 'agentweld[loaders-crewai]'      # CrewAI projects
+pip install 'agentweld[loaders]'             # just the logic, bring your own framework installs
+```
+
+> **Note:** Loaders are generated artifacts — do not edit them manually. Edit `agentweld.yaml` and regenerate.
 
 ## Plugin System
 

@@ -5,7 +5,29 @@ All notable changes to agentweld are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — v0.2.0
+## [Unreleased] — v0.3.0
+
+### Added
+- **Framework Loaders (v0.3 Phase 1)** — `agentweld generate` now produces a `loaders/` directory alongside existing artifacts, containing two ready-to-use framework shims:
+  - `loaders/langgraph_loader.py` — wires curated tools into a LangGraph agent via `build_graph()`
+  - `loaders/crewai_loader.py` — wires curated tools into a CrewAI crew via `build_crew()`
+- Each shim is **standalone by default** (no agentweld runtime dependency) but transparently delegates to `AgentWeldLoader` / `AgentWeldCrewLoader` if agentweld is installed in the runtime environment.
+- `emit.loaders: bool = True` added to `agentweld.yaml` schema — set to `false` to skip loader generation.
+- `--only loaders` support — regenerate only the loader shims without touching other artifacts.
+- New optional extras: `agentweld[loaders-langgraph]`, `agentweld[loaders-crewai]`, `agentweld[loaders]` (logic only).
+- `agentweld.loaders.langgraph.AgentWeldLoader` — runtime helper class for LangGraph projects.
+- `agentweld.loaders.crewai.AgentWeldCrewLoader` — runtime helper class for CrewAI projects.
+
+---
+
+## [0.2.1] — 2026-03-28
+
+### Fixed
+- `inspect` summary: tools were showing `N/A` for average quality score — now correctly computed and displayed.
+
+---
+
+## [0.2.0] — 2026-03-27
 
 ### Added
 - `generate` now prints a warning table for tools in the quality **warn zone** (`block_below ≤ score < warn_below`), even when `--force` is passed.
@@ -64,4 +86,6 @@ Initial public release of agentweld.
 - Quality gate in the `generate` pipeline (configurable `quality.block_below` threshold).
 - Conflict resolution strategies: `prefix`, `explicit`, `error`.
 
+[0.2.1]: https://github.com/sheshnath08/agentweld/releases/tag/v0.2.1
+[0.2.0]: https://github.com/sheshnath08/agentweld/releases/tag/v0.2.0
 [0.1.0]: https://github.com/sheshnath08/agentweld/releases/tag/v0.1.0

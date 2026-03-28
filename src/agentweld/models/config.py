@@ -122,6 +122,7 @@ class EmitConfig(BaseModel):
     agent_card: bool = True
     tool_manifest: bool = True
     system_prompt: bool = True
+    loaders: bool = True
     deploy_config: bool = False
     eval_suite: bool = False
 
