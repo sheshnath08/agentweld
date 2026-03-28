@@ -51,10 +51,12 @@ class AgentWeldLoader:
             ImportError: If ``langchain-mcp-adapters`` or ``langgraph`` are not installed.
         """
         try:
-            from langchain_mcp_adapters.client import (  # type: ignore[import-not-found,import-untyped]
-                MultiServerMCPClient,
+            from langchain_mcp_adapters.client import (
+                MultiServerMCPClient,  # type: ignore[import-not-found,import-untyped]
             )
-            from langgraph.prebuilt import create_react_agent  # type: ignore[import-not-found,import-untyped]
+            from langgraph.prebuilt import (
+                create_react_agent,  # type: ignore[import-not-found,import-untyped]
+            )
         except ImportError as exc:
             raise ImportError(
                 "Install langchain-mcp-adapters and langgraph: "
@@ -97,7 +99,9 @@ class AgentWeldLoader:
     def _resolve_model() -> Any:
         """Resolve the default LLM model. Tries Anthropic then OpenAI."""
         try:
-            from langchain_anthropic import ChatAnthropic  # type: ignore[import-not-found,import-untyped]
+            from langchain_anthropic import (
+                ChatAnthropic,  # type: ignore[import-not-found,import-untyped]
+            )
 
             return ChatAnthropic(model="claude-sonnet-4-6")  # type: ignore[call-arg]
         except ImportError:

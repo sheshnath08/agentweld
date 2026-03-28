@@ -45,7 +45,9 @@ class AgentWeldCrewLoader:
         """
         try:
             from crewai import Agent, Crew, Task  # type: ignore[import-not-found,import-untyped]
-            from crewai_tools import MCPServerAdapter  # type: ignore[import-not-found,import-untyped]
+            from crewai_tools import (
+                MCPServerAdapter,  # type: ignore[import-not-found,import-untyped]
+            )
         except ImportError as exc:
             raise ImportError(
                 "Install crewai with MCP support: "
