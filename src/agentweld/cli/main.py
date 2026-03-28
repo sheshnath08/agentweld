@@ -1,5 +1,7 @@
 """Root Typer app — registers all sub-commands and loads plugins."""
 
+from importlib.metadata import version as _pkg_version
+
 import typer
 
 app = typer.Typer(
@@ -7,6 +9,27 @@ app = typer.Typer(
     help="Turn any MCP server into a curated, composable, A2A-ready agent.",
     no_args_is_help=True,
 )
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(_pkg_version("agentweld"))
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show version and exit.",
+    ),
+) -> None:
+    pass
+
 
 # Import and register each command function directly on the root app
 from agentweld.cli.add import add  # noqa: E402

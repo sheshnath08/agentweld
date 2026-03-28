@@ -6,6 +6,7 @@ All tests use typer.testing.CliRunner and mock external dependencies
 
 from __future__ import annotations
 
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -56,6 +57,14 @@ def _make_config(source_id: str = "github") -> AgentweldConfig:
 
 
 # ── Help / subcommands ────────────────────────────────────────────────────────
+
+
+class TestVersion:
+    @pytest.mark.parametrize("flag", ["--version", "-V"])
+    def test_version_flags(self, flag: str) -> None:
+        result = runner.invoke(app, [flag])
+        assert result.exit_code == 0
+        assert result.output.strip() == _pkg_version("agentweld")
 
 
 class TestHelp:
