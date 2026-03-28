@@ -60,13 +60,9 @@ def _make_config(source_id: str = "github") -> AgentweldConfig:
 
 
 class TestVersion:
-    def test_version_flag(self):
-        result = runner.invoke(app, ["--version"])
-        assert result.exit_code == 0
-        assert result.output.strip() == _pkg_version("agentweld")
-
-    def test_version_short_flag(self):
-        result = runner.invoke(app, ["-V"])
+    @pytest.mark.parametrize("flag", ["--version", "-V"])
+    def test_version_flags(self, flag: str) -> None:
+        result = runner.invoke(app, [flag])
         assert result.exit_code == 0
         assert result.output.strip() == _pkg_version("agentweld")
 
