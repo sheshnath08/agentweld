@@ -10,6 +10,7 @@ import typer
 
 from agentweld.config.loader import load_config
 from agentweld.curation.engine import CurationEngine
+from agentweld.curation.quality import QualityScanner
 from agentweld.models.config import AgentweldConfig, SourceConfig
 from agentweld.models.tool import ToolDefinition
 from agentweld.sources.registry import get_adapter_for_source
@@ -81,9 +82,10 @@ def inspect(
 
 def _show_summary(tools_by_source: dict[str, list[ToolDefinition]]) -> None:
     """Display a summary table: one row per source."""
+    scanner = QualityScanner()
     rows = []
     for src_id, tools in tools_by_source.items():
-        scored = [t for t in tools if t.quality_score is not None]
+        scored = scanner.score_all(tools)
         scores = [t.quality_score for t in scored if t.quality_score is not None]
         avg_quality: float | None = sum(scores) / len(scores) if scores else None
         rows.append({"source": src_id, "tools": len(tools), "avg_quality": avg_quality})

@@ -390,6 +390,7 @@ class TestInspectCommand:
 
         assert result.exit_code == 0, result.output
         assert "github" in result.output
+        assert "n/a" not in result.output.lower()
 
     def test_inspect_no_sources(self, tmp_path):
         """inspect with no sources configured should exit cleanly."""
