@@ -24,7 +24,7 @@ AuthConfig = Annotated[BearerAuth, Field(discriminator="type")]
 class SourceConfig(BaseModel):
     id: str
     type: Literal["mcp_server", "mcp_registry"] = "mcp_server"
-    transport: Literal["stdio", "streamable-http"] | None = None
+    transport: Literal["stdio", "streamable-http", "local"] | None = None
     # stdio
     command: str | None = None
     # http
@@ -34,6 +34,8 @@ class SourceConfig(BaseModel):
     env: dict[str, str] = Field(default_factory=dict)
     # registry (only used when type == "mcp_registry")
     registry_id: str | None = None
+    # local Python module (only used when transport == "local")
+    module: str | None = None
 
     @model_validator(mode="after")
     def validate_transport_fields(self) -> SourceConfig:
@@ -44,6 +46,8 @@ class SourceConfig(BaseModel):
                 raise ValueError(f"Source '{self.id}': streamable-http transport requires 'url'")
         if self.type == "mcp_registry" and not self.registry_id:
             raise ValueError(f"Source '{self.id}': mcp_registry type requires 'registry_id'")
+        if self.transport == "local" and not self.module:
+            raise ValueError(f"Source '{self.id}': local transport requires 'module'")
         return self
 
 
