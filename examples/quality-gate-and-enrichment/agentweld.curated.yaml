@@ -1,0 +1,54 @@
+meta:
+  agentweld_version: "0.3.2"
+
+agent:
+  name: "Curated Support Agent"
+  description: "A cleaned-up support workflow agent after filtering weak tools."
+  version: "0.1.0"
+
+sources:
+  - id: noisy
+    type: mcp_server
+    transport: stdio
+    command: "uv run python noisy_mcp_server.py"
+
+tools:
+  noisy:
+    include:
+      - list_customer_orders
+      - send_invoice_reminder
+
+  rename:
+    "noisy::list_customer_orders": lookup_customer_orders
+
+  descriptions:
+    lookup_customer_orders: "List customer orders by customer id and optional status. Returns an empty list when no orders match and raises an invalid status error for unsupported statuses."
+    send_invoice_reminder: "Prepare an invoice reminder message for a customer account. Fails when the invoice id is invalid or the account is unavailable."
+
+quality:
+  warn_below: 0.8
+  block_below: 0.5
+
+composition:
+  conflict_strategy: prefix
+  prefix_separator: "__"
+
+a2a:
+  skills:
+    - id: support-billing
+      name: "Support Billing"
+      description: "Look up customer orders and prepare invoice reminder messages."
+      tools:
+        - lookup_customer_orders
+        - send_invoice_reminder
+      tags: [support, billing, curated]
+
+generate:
+  output_dir: ./agent
+  serve_port: 7779
+  emit:
+    agent_card: true
+    tool_manifest: true
+    system_prompt: true
+    loaders: true
+    deploy_config: false

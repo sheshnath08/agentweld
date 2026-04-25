@@ -3,30 +3,28 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-import pytest
-
+from agentweld.generators.agent_card import AgentCardGenerator
+from agentweld.generators.readme import ReadmeGenerator
+from agentweld.generators.system_prompt import SystemPromptGenerator
+from agentweld.generators.tool_manifest import ToolManifestGenerator
 from agentweld.models.composed import ComposedToolSet, RoutingEntry
 from agentweld.models.config import (
-    A2AConfig,
     A2AAuthConfig,
+    A2AConfig,
     AgentConfig,
     AgentweldConfig,
     SkillConfig,
     SourceConfig,
 )
 from agentweld.models.tool import ToolDefinition
-from agentweld.generators.agent_card import AgentCardGenerator
-from agentweld.generators.tool_manifest import ToolManifestGenerator
-from agentweld.generators.system_prompt import SystemPromptGenerator
-from agentweld.generators.readme import ReadmeGenerator
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _make_tool_set(tools: list[ToolDefinition]) -> ComposedToolSet:
-    routing = {t.name: RoutingEntry(source_id=t.source_id, original_name=t.source_tool_name) for t in tools}
+    routing = {
+        t.name: RoutingEntry(source_id=t.source_id, original_name=t.source_tool_name) for t in tools
+    }
     return ComposedToolSet(tools=tools, routing_map=routing)
 
 
@@ -84,10 +82,16 @@ class TestAgentCardGenerator:
         card = gen.generate(_make_tool_set([sample_tool]), config)
         assert card.authentication.schemes == ["bearer"]
 
-    def test_agent_card_default_url(self, sample_tool, sample_config):
+    def test_agent_card_default_url_uses_serve_port(self, sample_tool, sample_config):
         gen = AgentCardGenerator()
         card = gen.generate(_make_tool_set([sample_tool]), sample_config)
-        assert card.url == "http://localhost:8080"
+        assert card.url == "http://localhost:7777"
+
+    def test_agent_card_custom_url(self, sample_tool, sample_config):
+        sample_config.agent.url = "https://agents.example.com/pr-review"
+        gen = AgentCardGenerator()
+        card = gen.generate(_make_tool_set([sample_tool]), sample_config)
+        assert card.url == "https://agents.example.com/pr-review"
 
     def test_agent_card_write_path(self, sample_tool, sample_config, tmp_path):
         gen = AgentCardGenerator()

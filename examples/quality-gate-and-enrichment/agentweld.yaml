@@ -1,0 +1,51 @@
+meta:
+  agentweld_version: "0.3.2"
+
+agent:
+  name: "Noisy Support Agent"
+  description: "A deliberately noisy example used to demonstrate quality gates."
+  version: "0.1.0"
+
+sources:
+  - id: noisy
+    type: mcp_server
+    transport: stdio
+    command: "uv run python noisy_mcp_server.py"
+
+tools:
+  noisy:
+    include:
+      - get
+      - post
+      - list_customer_orders
+      - send_invoice_reminder
+
+quality:
+  warn_below: 0.8
+  block_below: 0.5
+
+composition:
+  conflict_strategy: prefix
+  prefix_separator: "__"
+
+a2a:
+  skills:
+    - id: noisy-support
+      name: "Noisy Support"
+      description: "Demonstrates how low-quality tool metadata appears before curation."
+      tools:
+        - get
+        - post
+        - list_customer_orders
+        - send_invoice_reminder
+      tags: [quality, demo]
+
+generate:
+  output_dir: ./agent
+  serve_port: 7779
+  emit:
+    agent_card: true
+    tool_manifest: true
+    system_prompt: true
+    loaders: true
+    deploy_config: false

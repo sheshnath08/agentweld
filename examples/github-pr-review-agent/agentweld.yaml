@@ -1,0 +1,77 @@
+meta:
+  agentweld_version: "0.3.2"
+
+agent:
+  name: "GitHub PR Review Agent"
+  description: "Reviews pull requests and repository context using a curated GitHub MCP surface."
+  version: "0.1.0"
+
+sources:
+  - id: github
+    type: mcp_server
+    transport: stdio
+    command: "npx @modelcontextprotocol/server-github"
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+
+tools:
+  github:
+    include:
+      - get_repository
+      - get_file_contents
+      - search_code
+      - list_pull_requests
+      - get_pull_request
+      - get_pull_request_files
+      - get_pull_request_comments
+      - create_pull_request_review
+
+  rename:
+    "github::get_pull_request": inspect_pull_request
+    "github::get_pull_request_files": list_changed_files
+    "github::get_pull_request_comments": list_review_comments
+    "github::create_pull_request_review": submit_review
+
+  descriptions:
+    get_repository: "Retrieve repository metadata, default branch, visibility, and access details. Returns not found errors when the token cannot access the repository."
+    get_file_contents: "Read file contents from a repository path and optional ref. Returns not found errors for missing paths or inaccessible repositories."
+    search_code: "Search code across repositories using GitHub query syntax. Returns an empty result set when no code matches."
+    list_pull_requests: "List pull requests for a repository with optional state filtering. Returns pagination or access errors from GitHub when unavailable."
+    inspect_pull_request: "Inspect one pull request, including title, author, state, branch refs, labels, and mergeability signals."
+    list_changed_files: "List files changed by a pull request with status and patch metadata. Returns unavailable errors when the pull request cannot be read."
+    list_review_comments: "List review comments on a pull request so the agent can avoid duplicate feedback and understand prior discussion."
+    submit_review: "Submit a pull request review with comments and approval state. Fails if the token lacks review permissions."
+
+quality:
+  warn_below: 0.65
+  block_below: 0.4
+
+composition:
+  conflict_strategy: prefix
+  prefix_separator: "__"
+
+a2a:
+  skills:
+    - id: pull-request-review
+      name: "Pull Request Review"
+      description: "Inspect pull requests, changed files, repository context, and submit review feedback."
+      tools:
+        - get_repository
+        - get_file_contents
+        - search_code
+        - list_pull_requests
+        - inspect_pull_request
+        - list_changed_files
+        - list_review_comments
+        - submit_review
+      tags: [github, pull-request, code-review]
+
+generate:
+  output_dir: ./agent
+  serve_port: 7777
+  emit:
+    agent_card: true
+    tool_manifest: true
+    system_prompt: true
+    loaders: true
+    deploy_config: false

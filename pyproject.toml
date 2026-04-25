@@ -69,6 +69,7 @@ packages = ["src/agentweld"]
 include = [
   "src/",
   "tests/",
+  "examples/",
   "LICENSE",
   "README.md",
   "CHANGELOG.md",
