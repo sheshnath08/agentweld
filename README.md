@@ -33,7 +33,7 @@ GENERATORS  →  agent_card.json  /  mcp.json  /  system_prompt.md  /  README.md
 pip install agentweld
 ```
 
-### 5-command walkthrough
+### Walkthrough
 
 ```bash
 # 1. Scaffold a project from an MCP server
@@ -56,10 +56,17 @@ $ agentweld inspect
 │ linear   │  24   │   0.71      │
 └──────────┴───────┴─────────────┘
 
-# 4. Edit agentweld.yaml to filter, rename, or override descriptions
+# 4. (Optional) Preview LLM enrichment for lower-quality tool descriptions
+#    Requires: pip install agentweld[anthropic] or agentweld[openai]
+$ agentweld enrich --below 0.65 --dry-run
+
+# 5. (Optional) Apply enrichment and write improved descriptions to agentweld.yaml
+$ agentweld enrich --below 0.65
+
+# 6. Edit agentweld.yaml to filter, rename, or override descriptions
 #    (see Configuration Reference below)
 
-# 5. Generate artifacts
+# 7. Generate artifacts
 $ agentweld generate
 Generated 6 artifact(s) in ./agent:
   • agent_card.json
@@ -70,7 +77,7 @@ Generated 6 artifact(s) in ./agent:
   • loaders/crewai_loader.py
   • loaders/adk_a2a_loader.py
 
-# 6. (Optional) Serve the agent locally for A2A discovery
+# 8. (Optional) Serve the agent locally for A2A discovery
 $ agentweld serve
 Serving ./agent on http://127.0.0.1:7777
 
@@ -126,6 +133,21 @@ Options:
   --source            Show raw tools per source (pre-curation)
   --final             Show post-curation tools
   --conflicts         Show naming conflicts across sources
+  -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
+```
+
+### `agentweld enrich`
+
+Run LLM enrichment for selected tools or tools below a quality threshold. Writes improved descriptions back to `agentweld.yaml` with provenance comments. Requires `pip install agentweld[anthropic]` or `pip install agentweld[openai]`.
+
+```
+agentweld enrich [OPTIONS]
+
+Options:
+  --tool TEXT         Enrich a specific tool by name
+  --below FLOAT       Enrich tools below this quality score
+  --source TEXT       Filter to a single source ID
+  --dry-run           Preview which tools would be enriched without writing changes
   -c, --config PATH   Path to agentweld.yaml [default: ./agentweld.yaml]
 ```
 
@@ -263,6 +285,11 @@ quality:
   warn_below: 0.6     # Print a warning table during generate for tools below this score
   block_below: 0.4    # Quality gate: fail generate if any tool score < this threshold
                       # Use --force to bypass
+
+enrichment:
+  provider: anthropic        # anthropic | openai
+  model: claude-sonnet-4-6   # model to use for description enrichment
+  auto_enrich_below: 0.6     # default threshold for `agentweld enrich`
 
 composition:
   conflict_strategy: prefix   # prefix | explicit | error
