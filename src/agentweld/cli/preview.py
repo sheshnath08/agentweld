@@ -115,7 +115,7 @@ def _print_artifact_contents(artifacts: list[Path]) -> None:
         console.rule(style="dim")
         try:
             content = path.read_text(encoding="utf-8")
-            console.print(content)
+            console.print(content, markup=False, highlight=False)
         except OSError as e:
             console.print(f"[red]Could not read {path.name}:[/] {e}")
         console.rule(style="dim")

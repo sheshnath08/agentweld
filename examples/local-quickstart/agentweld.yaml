@@ -1,0 +1,57 @@
+meta:
+  agentweld_version: "0.3.2"
+
+agent:
+  name: "Local Demo Agent"
+  description: "A no-token demo agent backed by a tiny local MCP server."
+  version: "0.1.0"
+
+sources:
+  - id: demo
+    type: mcp_server
+    transport: stdio
+    command: "uv run python demo_mcp_server.py"
+
+tools:
+  demo:
+    include:
+      - search_notes
+      - draft_release_note
+      - create_followup_ticket
+
+  rename:
+    "demo::draft_release_note": draft_release_summary
+
+  descriptions:
+    search_notes: "Search the demo knowledge base by keyword and return matching note titles, snippets, and tags. Returns an empty list when nothing matches."
+    draft_release_summary: "Draft a short release summary from a feature name, audience, and change list. Fails when required fields are missing."
+    create_followup_ticket: "Create a follow-up ticket draft with title, priority, owner, and acceptance criteria. Returns validation errors for unsupported priorities."
+
+quality:
+  warn_below: 0.65
+  block_below: 0.4
+
+composition:
+  conflict_strategy: prefix
+  prefix_separator: "__"
+
+a2a:
+  skills:
+    - id: demo-workflow
+      name: "Demo Workflow"
+      description: "Search notes, draft release summaries, and prepare follow-up ticket drafts."
+      tools:
+        - search_notes
+        - draft_release_summary
+        - create_followup_ticket
+      tags: [demo, local, quickstart]
+
+generate:
+  output_dir: ./agent
+  serve_port: 7777
+  emit:
+    agent_card: true
+    tool_manifest: true
+    system_prompt: true
+    loaders: true
+    deploy_config: false

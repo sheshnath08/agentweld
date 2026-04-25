@@ -182,6 +182,7 @@ class AgentConfig(BaseModel):
     name: str
     description: str = ""
     version: str = "1.0.0"
+    url: str | None = None
 
 
 # ── Root ──────────────────────────────────────────────────────────────────────

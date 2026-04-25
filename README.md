@@ -85,6 +85,18 @@ Serving ./agent on http://127.0.0.1:7777
   GET http://127.0.0.1:7777/mcp.json
 ```
 
+## Examples
+
+The [examples gallery](examples/) includes copyable projects for the most common
+paths:
+
+| Example | Use It When |
+|---|---|
+| [local-quickstart](examples/local-quickstart/) | You want a no-token local demo. |
+| [github-pr-review-agent](examples/github-pr-review-agent/) | You want a focused GitHub pull-request review agent. |
+| [dev-workflow-agent](examples/dev-workflow-agent/) | You want one agent composed from GitHub and Linear. |
+| [quality-gate-and-enrichment](examples/quality-gate-and-enrichment/) | You want to understand inspection, linting, filtering, and enrichment. |
+
 ## CLI Reference
 
 ### `agentweld init`
@@ -243,6 +255,7 @@ agent:
   name: "My Dev Agent"
   description: "An agent for GitHub and Linear workflows."
   version: "0.1.0"
+  # url: "https://agents.example.com/my-dev-agent"  # optional public A2A URL
 
 sources:
   - id: github

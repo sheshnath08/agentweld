@@ -45,8 +45,8 @@ class AgentCardGenerator:
                 auth_schemes = list(config.a2a.authentication.schemes)
             auth = AgentCardAuthentication(schemes=auth_schemes)
 
-            # URL: use agent config url if available, else default
-            url: str = getattr(config.agent, "url", None) or "http://localhost:8080"
+            port = config.generate.serve_port or 7777
+            url = config.agent.url or f"http://localhost:{port}"
 
             return AgentCard(
                 name=config.agent.name,

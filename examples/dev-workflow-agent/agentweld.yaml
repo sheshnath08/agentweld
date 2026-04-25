@@ -1,0 +1,104 @@
+meta:
+  agentweld_version: "0.3.2"
+
+agent:
+  name: "Dev Workflow Agent"
+  description: "Coordinates GitHub and Linear workflows from one curated agent surface."
+  version: "0.1.0"
+
+sources:
+  - id: github
+    type: mcp_server
+    transport: stdio
+    command: "npx @modelcontextprotocol/server-github"
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+
+  - id: linear
+    type: mcp_server
+    transport: streamable-http
+    url: "https://mcp.linear.app/sse"
+    auth:
+      type: bearer
+      token_env: LINEAR_API_KEY
+
+tools:
+  github:
+    include:
+      - get_repository
+      - search_code
+      - list_pull_requests
+      - get_pull_request
+      - get_pull_request_files
+
+  linear:
+    include:
+      - list_issues
+      - get_issue
+      - create_issue
+      - update_issue
+      - list_projects
+
+  rename:
+    "github::list_pull_requests": github_list_prs
+    "github::get_pull_request": github_inspect_pr
+    "github::get_pull_request_files": github_list_changed_files
+    "linear::list_issues": linear_list_issues
+    "linear::get_issue": linear_inspect_issue
+    "linear::create_issue": linear_create_issue
+    "linear::update_issue": linear_update_issue
+    "linear::list_projects": linear_list_projects
+
+  descriptions:
+    get_repository: "Retrieve repository metadata and visibility details. Returns not found errors when the token cannot access the repository."
+    search_code: "Search repository code with GitHub query syntax. Returns an empty result set when no code matches."
+    github_list_prs: "List GitHub pull requests for a repository with optional state filtering."
+    github_inspect_pr: "Inspect a GitHub pull request, including author, state, branch refs, labels, and mergeability signals."
+    github_list_changed_files: "List files changed in a GitHub pull request with status and patch metadata."
+    linear_list_issues: "List Linear issues by team, assignee, status, or project. Returns authorization errors when the token lacks workspace access."
+    linear_inspect_issue: "Inspect a Linear issue, including title, description, team, assignee, labels, status, and project links."
+    linear_create_issue: "Create a Linear issue with title, description, team, priority, and optional project assignment."
+    linear_update_issue: "Update an existing Linear issue. Fails when the issue id is invalid or the token lacks permission."
+    linear_list_projects: "List Linear projects so planning tasks can connect work items to the correct project."
+
+quality:
+  warn_below: 0.65
+  block_below: 0.4
+
+composition:
+  conflict_strategy: prefix
+  prefix_separator: "__"
+
+a2a:
+  skills:
+    - id: code-investigation
+      name: "Code Investigation"
+      description: "Search code and inspect repository or pull request context."
+      tools:
+        - get_repository
+        - search_code
+        - github_list_prs
+        - github_inspect_pr
+        - github_list_changed_files
+      tags: [github, code, pull-request]
+
+    - id: issue-triage
+      name: "Issue Triage"
+      description: "Find, inspect, create, and update Linear issues for engineering workflows."
+      tools:
+        - linear_list_issues
+        - linear_inspect_issue
+        - linear_create_issue
+        - linear_update_issue
+        - linear_list_projects
+      tags: [linear, issues, planning]
+
+generate:
+  output_dir: ./agent
+  serve_port: 7778
+  emit:
+    agent_card: true
+    tool_manifest: true
+    system_prompt: true
+    loaders: true
+    deploy_config: true
