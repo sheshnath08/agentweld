@@ -342,6 +342,31 @@ class TestRegistry:
         adapter = get_adapter_for_source(src)
         assert isinstance(adapter, MCPHttpAdapter)
 
+    def test_get_adapter_for_source_local_dispatches_to_local_key(self):
+        class MockLocalAdapter:
+            async def introspect(self, config):
+                return []
+            async def health_check(self, config):
+                return True
+
+        mock_adapter = MockLocalAdapter()
+        _reset_registry()
+        register_adapter("local", mock_adapter)
+        src = SourceConfig(id="x", type="mcp_server", transport="local", module="a.b")
+        result = get_adapter_for_source(src)
+        assert result is mock_adapter
+
+    def test_get_adapter_for_source_local_raises_plugin_error_when_uninstalled(self):
+        # Simulate environment where agentweld-local is not installed by
+        # suppressing plugin discovery so only built-ins are available.
+        src = SourceConfig(id="x", type="mcp_server", transport="local", module="a.b")
+        with patch(
+            "agentweld.plugins.loader.load_plugin_adapters",
+            return_value={},
+        ):
+            with pytest.raises(PluginError, match="local"):
+                get_adapter_for_source(src)
+
 
 # ── MCPRegistryAdapter ────────────────────────────────────────────────────────
 
